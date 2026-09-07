@@ -28,11 +28,32 @@ The same five workers exist in every runtime, with identical prompts. Only the m
 
 Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `[agents] max_depth = 1`, Antigravity workers' tool lists exclude `invoke_subagent`, OpenCode workers have `task: deny`.
 
-The orchestrator role is played by whatever model the session runs. Use the strongest model available in each runtime for it.
-
 ## Install
 
-Clone the repo anywhere and run the installer. That is the whole install.
+One command installs or updates everything. It detects which of the four runtimes are present, installs the worker agents into each, installs the skill (through the [`skills` CLI](https://skills.sh) when `npx` is available, otherwise by copying), and adds the Codex no-nesting setting if it is missing.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
+```
+
+If worker agents already exist and differ, it asks once before replacing them. Add `--yes` for unattended runs:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --yes
+```
+
+That is the whole install. Do not run `npx skills add` on this repo yourself; the installer already does that when the CLI is available, and the skill cannot work without the worker agents the installer adds.
+
+Then start a **fresh** session:
+
+- **Claude Code, Codex, Antigravity:** type `/orchestrate`. The skill is user-invoked only; the model never triggers it on its own.
+- **OpenCode:** select the `orchestrate` primary agent. The skill is not used there.
+
+**Update:** re-run the same command. **Uninstall:** `curl -fsSL .../install.sh | bash -s -- --uninstall`.
+
+### Working on the repo itself
+
+Clone it and run the installer from the clone. In that mode the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately:
 
 ```bash
 git clone https://github.com/NuttapongPun/orchestration-workflow.git
@@ -40,16 +61,18 @@ cd orchestration-workflow
 ./install.sh
 ```
 
-`install.sh` detects which of the four runtimes are installed, symlinks the skill and the worker agents into each one, and adds the Codex no-nesting setting if it is missing. It is safe to re-run, and `./install.sh --uninstall` removes the links again.
+## Choose the orchestrator model
 
-Then start a **fresh** session:
+The orchestrator role is played by whatever model your session runs, so pick the strongest one available before typing `/orchestrate`. It does the judgment work (decomposition, briefing, judging review verdicts) and spends few tokens, so a stronger model raises quality more than it raises cost.
 
-- **Claude Code, Codex, Antigravity:** type `/orchestrate`. The skill is user-invoked only; the model never triggers it on its own.
-- **OpenCode:** select the `orchestrate` primary agent. The skill is not used there.
+| Runtime | Suggested orchestrator | How to set |
+|---|---|---|
+| Claude Code | Fable 5.1, or Opus 5 | `/model` |
+| Codex | GPT-6 Astra if your plan has it, else GPT-5.6 Sol | `/model` |
+| Antigravity CLI | Gemini 3.1 Pro (High) | session model setting; `--agent` is ignored when resuming, so start fresh |
+| OpenCode | GPT-5.6 Sol | pinned in the `orchestrate` primary agent (`OPENCODE_PM_MODEL` in `build.py`) |
 
-Do **not** also run `npx skills add NuttapongPun/orchestration-workflow`. The `skills` CLI would install a second copy of the skill without the worker agents, and the skill cannot work without them.
-
-To update later: `git pull` inside the clone. The files are symlinked, so nothing else is needed.
+A Flash, Haiku, or mini-class model as orchestrator defeats the purpose: it will route badly and accept weak review verdicts.
 
 ## Customize
 
