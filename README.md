@@ -55,6 +55,30 @@ The skill will then report *blocked on worker availability* until the worker age
 
 Do not mix the two on one machine: `install.sh` makes `~/.agents/skills/orchestrate` a symlink into this repo, while the `skills` CLI writes a copy there. Pick one.
 
+## Other skills I use
+
+Everything else comes from public repos through the [`skills` CLI](https://skills.sh), which installs into `~/.agents/skills/` and links each skill into every agent it detects. On a new machine, after `install.sh`:
+
+```bash
+npx skills add mattpocock/skills --global --all
+npx skills add vercel-labs/skills --global --skill find-skills
+npx skills add microsoft/playwright-cli --global
+npx skills add CoplayDev/unity-mcp --global --skill unity-mcp-orchestrator
+npx skills add kepano/obsidian-skills --global --skill defuddle
+```
+
+| Source | Skills |
+|---|---|
+| `mattpocock/skills` | ask-matt, code-review, codebase-design, diagnosing-bugs, domain-modeling, grill-me, grill-with-docs, grilling, handoff, implement, improve-codebase-architecture, prototype, research, resolving-merge-conflicts, setup-matt-pocock-skills, tdd, teach, to-questionnaire, to-spec, to-tickets, triage, wait-what, wayfinder, wizard, writing-for-agents |
+| `vercel-labs/skills` | find-skills |
+| `microsoft/playwright-cli` | playwright-cli |
+| `CoplayDev/unity-mcp` | unity-mcp-orchestrator (the Unity MCP package's own sync button writes a duplicate copy named `unity-mcp-skill`; use one or the other) |
+| `kepano/obsidian-skills` | defuddle |
+
+`npx skills update` refreshes all of them. `~/.agents/.skill-lock.json` records the exact source and commit of each one.
+
+Two things the `skills` CLI gets wrong for this setup, which `install.sh` covers: it does not link into Antigravity's real skills folder (`~/.gemini/config/skills/`), and `npx skills list` misreports the agents for `orchestrate` because it is a symlink into this repo. The runtimes load it fine.
+
 ## Customize
 
 1. Edit the prompts, models, or effort levels in `build.py`.
