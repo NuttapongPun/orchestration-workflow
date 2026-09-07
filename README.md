@@ -110,6 +110,13 @@ npx skills add kepano/obsidian-skills --global --skill defuddle
 
 `npx skills update` refreshes them. `~/.agents/.skill-lock.json` records the exact source and commit of each one.
 
+## Support
+
+If this workflow saves you time, you can support its upkeep:
+
+- [Ko-fi](https://ko-fi.com/nuttapongp)
+- [Buy Me a Coffee](https://buymeacoffee.com/nuttapongp)
+
 ## License
 
 MIT
