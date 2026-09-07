@@ -61,16 +61,6 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --uninstall
 ```
 
-### Working on the repo itself
-
-Clone it and run the installer from the clone. In that mode the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately:
-
-```bash
-git clone https://github.com/NuttapongPun/orchestration-workflow.git
-cd orchestration-workflow
-./install.sh
-```
-
 ## Choose the orchestrator model
 
 The orchestrator role is played by whatever model your session runs, so pick the strongest one available before typing `/orchestrate`. It does the judgment work (decomposition, briefing, judging review verdicts) and spends few tokens, so a stronger model raises quality more than it raises cost.
@@ -86,11 +76,27 @@ A Flash, Haiku, or mini-class model as orchestrator defeats the purpose: it will
 
 ## Customize
 
+This repo encodes one way of working. Fork it, or clone it, and change whatever does not match your style, your agents, or your providers: the worker prompts, the model tiers, the effort levels, which runtimes are included. Everything is generated from one file, so a change is one edit.
+
+### Set up the clone
+
+Run the installer from the clone. In that mode the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately without re-installing:
+
+```bash
+git clone https://github.com/NuttapongPun/orchestration-workflow.git
+cd orchestration-workflow
+./install.sh
+```
+
+If you forked it, clone your fork instead and change `REPO_SLUG` at the top of `install.sh` so the one-line installer points at your fork.
+
+### Make a change
+
 1. Edit the prompts, models, or effort levels in `build.py`. Every worker prompt is defined exactly once there.
 2. Run `python3 build.py` to regenerate the files for all four runtimes.
-3. Commit. Other machines pick up the change with `git pull`.
+3. Start a fresh session in the runtime to pick up the change. Commit when you are happy with it.
 
-Changing a model for one runtime is a one-line edit in the `MODELS` table. Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, and a row in `install.sh`.
+Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapping OpenCode to another provider is `MODELS["opencode"]` plus `OPENCODE_PM_MODEL`. Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, and a row in `install.sh`.
 
 ## Runtime notes
 
