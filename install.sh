@@ -13,6 +13,8 @@
 #         --uninstall  remove everything this script installed
 set -euo pipefail
 
+main() {
+
 REPO_SLUG="NuttapongPun/orchestration-workflow"
 TARBALL="https://github.com/$REPO_SLUG/archive/refs/heads/main.tar.gz"
 CANON="$HOME/.agents/skills/orchestrate"        # canonical skill location (what the `skills` CLI uses)
@@ -114,7 +116,7 @@ if [[ "$MODE" == "copy" ]] && command -v npx >/dev/null 2>&1; then
   say "  skills CLI available (npx). Installing the skill through it so 'npx skills update' can refresh it."
   yflag=""; [[ $YES -eq 1 ]] && yflag="-y"
   if [[ $HAVE_TTY -eq 1 ]]; then npx -y skills add "$REPO_SLUG" --global --skill orchestrate $yflag < /dev/tty && SKILL_VIA_CLI=1 || true
-  else npx -y skills add "$REPO_SLUG" --global --skill orchestrate -y && SKILL_VIA_CLI=1 || true; fi
+  else npx -y skills add "$REPO_SLUG" --global --skill orchestrate -y < /dev/null && SKILL_VIA_CLI=1 || true; fi
   [[ $SKILL_VIA_CLI -eq 1 && -d "$CANON" ]] || { SKILL_VIA_CLI=0; say "  skills CLI install did not produce $CANON; falling back to a direct copy."; }
 fi
 if [[ $SKILL_VIA_CLI -eq 0 ]]; then
@@ -152,3 +154,7 @@ Run the orchestrator on the strongest model you have. Suggested:
 
 Update later: re-run this command$( [[ "$MODE" == "link" ]] && printf ', or git pull in the clone' ).
 EOF
+}
+
+# Everything above is parsed before this line runs, so `curl | bash` cannot be cut short by a child reading stdin.
+main "$@"
