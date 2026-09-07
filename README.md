@@ -47,7 +47,7 @@ That is the whole install. Do not run `npx skills add` on this repo yourself; th
 Then start a **fresh** session:
 
 - **Claude Code, Codex, Antigravity:** type `/orchestrate`. The skill is user-invoked only; the model never triggers it on its own.
-- **OpenCode:** select the `orchestrate` primary agent. The skill is not used there.
+- **OpenCode:** select the `orchestrate` primary agent. The skill is not used there. The agents use `openai/...` models, so the OpenAI provider must be connected first (see Runtime notes).
 
 **Update:** re-run the same command. **Uninstall:** `curl -fsSL .../install.sh | bash -s -- --uninstall`.
 
@@ -88,6 +88,14 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Addin
 - **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run; only `investigate` is sandbox read-only.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
 - **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In the other three it is a prompt rule.
+- **OpenCode needs the OpenAI provider connected.** The OpenCode agents reference `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. Link the provider once, either with a ChatGPT login or an API key:
+
+  ```bash
+  opencode auth login      # choose OpenAI, then ChatGPT login or API key
+  opencode auth list       # should show "OpenAI"
+  ```
+
+  To use another provider instead, change `MODELS["opencode"]` and `OPENCODE_PM_MODEL` in `build.py`, run `python3 build.py`, and re-run the installer.
 - Reviewers run at the tier of the work they review. The orchestrator's one non-delegable job is to judge the verdict and confirm the tests actually ran.
 
 ## Companion skills
