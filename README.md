@@ -78,6 +78,34 @@ The orchestrator role is played by whatever model your session runs, so pick the
 
 A Flash, Haiku, or mini-class model as orchestrator defeats the purpose: it will route badly and accept weak review verdicts.
 
+## OpenCode model stacks
+
+OpenCode fixes each agent's model in its file, so the whole stack (orchestrator, hard worker, easy worker) is chosen once in `build.py` by setting `OPENCODE_STACK`. Five stacks are predefined. Model IDs are in OpenCode's `provider/model` form, as printed by `opencode models` once the provider is linked with `opencode auth login`.
+
+| `OPENCODE_STACK` | Provider | Orchestrator | Hard worker | Easy worker |
+|---|---|---|---|---|
+| `openai` (default) | OpenAI | `openai/gpt-5.6-sol` | `openai/gpt-5.6-terra` | `openai/gpt-5.6-luna` |
+| `openai-openrouter` | OpenRouter | `openrouter/openai/gpt-5.6-sol` | `openrouter/openai/gpt-5.6-terra` | `openrouter/openai/gpt-5.6-luna` |
+| `claude` | Anthropic | `anthropic/claude-fable-5-1` | `anthropic/claude-opus-5` | `anthropic/claude-sonnet-5` |
+| `claude-openrouter` | OpenRouter | `openrouter/anthropic/claude-fable-5.1` | `openrouter/anthropic/claude-opus-5` | `openrouter/anthropic/claude-sonnet-5` |
+| `cheap-openrouter` | OpenRouter | `openrouter/moonshotai/kimi-k3` | `openrouter/z-ai/glm-5.3` | `openrouter/deepseek/deepseek-v4-flash-0731` |
+
+Rough cost per million tokens (input / output), OpenRouter list prices in September 2026:
+
+| Model | Input | Output |
+|---|---|---|
+| GPT-5.6 Sol / Terra / Luna | $2 / $2 / $0.20 | $10 / $12 / $1.20 |
+| GPT-6 Astra | $10 | $50 |
+| Claude Fable 5.1 / Opus 5 / Sonnet 5 | $10 / $5 / $2 | $50 / $25 / $10 |
+| Kimi K3 / GLM 5.3 / DeepSeek V4 Flash 0731 | $3 / $1.40 / $0.14 | $15 / $4.40 / $0.28 |
+
+Notes:
+
+- The Claude stack mirrors what the Claude Code runtime uses natively (Fable as orchestrator, Opus hard, Sonnet easy). Pick `claude` with an Anthropic key, or `claude-openrouter` to route it through OpenRouter.
+- The cheap stack keeps the same three-role shape at roughly a tenth of the cost. Expect weaker routing judgment from the orchestrator; the review step matters more there. `openrouter/z-ai/glm-5.3-flash` is an even cheaper easy-worker option.
+- Anthropic's direct IDs use dashes in the version (`claude-fable-5-1`); OpenRouter's use dots (`claude-fable-5.1`). Both are correct for their provider.
+- To use a mix, edit the entries in `OPENCODE_STACKS` directly. After any change: `python3 build.py`, then re-run the installer.
+
 ## Customize
 
 This repo encodes one way of working. Fork it, or clone it, and change whatever does not match your style, your agents, or your providers: the worker prompts, the model tiers, the effort levels, which runtimes are included. Everything is generated from one file, so a change is one edit.
@@ -100,7 +128,7 @@ If you forked it, clone your fork instead and change `REPO_SLUG` at the top of `
 2. Run `python3 build.py` to regenerate the files for all four runtimes.
 3. Start a fresh session in the runtime to pick up the change. Commit when you are happy with it.
 
-Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapping OpenCode to another provider is `MODELS["opencode"]` plus `OPENCODE_PM_MODEL`. Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, and a row in `install.sh`.
+Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapping OpenCode to another provider or price point is one line, `OPENCODE_STACK` (see the stacks above). Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, and a row in `install.sh`.
 
 ## Runtime notes
 
@@ -115,7 +143,7 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
   opencode auth list       # should show "OpenAI"
   ```
 
-  To use another provider instead, change `MODELS["opencode"]` and `OPENCODE_PM_MODEL` in `build.py`, run `python3 build.py`, and re-run the installer.
+  To use another provider instead, set `OPENCODE_STACK` in `build.py` (see "OpenCode model stacks"), run `python3 build.py`, and re-run the installer.
 - Reviewers run at the tier of the work they review. The orchestrator's one non-delegable job is to judge the verdict and confirm the tests actually ran.
 
 ## Companion skills

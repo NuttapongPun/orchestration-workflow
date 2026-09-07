@@ -23,9 +23,20 @@ MODELS = {
     "claude":      {"easy": "sonnet",        "hard": "opus"},
     "codex":       {"easy": "gpt-5.6-luna",  "hard": "gpt-5.6-terra"},
     "antigravity": {"easy": "flash",         "hard": "pro"},
-    "opencode":    {"easy": "openai/gpt-5.6-luna", "hard": "openai/gpt-5.6-terra"},
 }
-OPENCODE_PM_MODEL = "openai/gpt-5.6-sol"
+
+# OpenCode: pick one stack. Model IDs are OpenCode's provider/model form (see `opencode models`).
+# Prices and alternatives are described in README.md, "OpenCode model stacks".
+OPENCODE_STACKS = {
+    "openai":            {"pm": "openai/gpt-5.6-sol",                    "hard": "openai/gpt-5.6-terra",             "easy": "openai/gpt-5.6-luna"},
+    "openai-openrouter": {"pm": "openrouter/openai/gpt-5.6-sol",         "hard": "openrouter/openai/gpt-5.6-terra",  "easy": "openrouter/openai/gpt-5.6-luna"},
+    "claude":            {"pm": "anthropic/claude-fable-5-1",            "hard": "anthropic/claude-opus-5",          "easy": "anthropic/claude-sonnet-5"},
+    "claude-openrouter": {"pm": "openrouter/anthropic/claude-fable-5.1", "hard": "openrouter/anthropic/claude-opus-5", "easy": "openrouter/anthropic/claude-sonnet-5"},
+    "cheap-openrouter":  {"pm": "openrouter/moonshotai/kimi-k3",         "hard": "openrouter/z-ai/glm-5.3",          "easy": "openrouter/deepseek/deepseek-v4-flash-0731"},
+}
+OPENCODE_STACK = "openai"
+MODELS["opencode"] = {"easy": OPENCODE_STACKS[OPENCODE_STACK]["easy"], "hard": OPENCODE_STACKS[OPENCODE_STACK]["hard"]}
+OPENCODE_PM_MODEL = OPENCODE_STACKS[OPENCODE_STACK]["pm"]
 
 # ------------------------------------------------------------------ prompts
 DESC = {

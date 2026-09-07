@@ -33,7 +33,7 @@ Preserve these when adapting. Each one closes a failure the workflow was built t
 ### Adapt for a human (different models, providers, prompts, or agents)
 
 1. Have them fork or clone. In a clone, `./install.sh` links runtime files to the clone, so edits are live after a fresh session.
-2. Change `build.py` only: `MODELS`, `EFFORT`, `OPENCODE_PM_MODEL`, `BODIES`, `DESC`. Keep worker names unless you also update `SKILL.md`, every file under `skills/orchestrate/references/`, and the OpenCode primary agent's `task` allowlist.
+2. Change `build.py` only: `MODELS`, `EFFORT`, `OPENCODE_STACK` / `OPENCODE_STACKS`, `BODIES`, `DESC`. Keep worker names unless you also update `SKILL.md`, every file under `skills/orchestrate/references/`, and the OpenCode primary agent's `task` allowlist.
 3. Run `python3 build.py`, then `./install.sh`.
 4. Verify with the checks below. Done when the generated files parse and every runtime lists the workers with the new models.
 
