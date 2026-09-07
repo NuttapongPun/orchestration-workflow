@@ -4,6 +4,10 @@ One orchestration workflow that works the same way in four coding agents: **Clau
 
 The model you are talking to acts as an **orchestrator**: it breaks the job into tasks, briefs worker subagents, sends the results to a reviewer, judges the evidence, and reports once. It does not write code itself. Hard tasks go to a strong worker model, easy tasks to a cheap one. This keeps the expensive model's context small, because the workers hold the files, search results, and command output, and it routes cost by task difficulty.
 
+## For AI agents
+
+If you are an agent reading this repository to help someone install or adapt the workflow, read [`AGENTS.md`](AGENTS.md) first. It carries the steps for each case, the invariants to preserve, per-runtime verification commands, and the facts that are not visible in the files. This README is written for people.
+
 ## How it is organized
 
 ```
