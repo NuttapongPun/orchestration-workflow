@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node (only if you ever add tooling here)
+node_modules/
+
+# Backups made by install.sh when it replaces a real file with a link
+*.bak
+
+# Never commit runtime credentials or local runtime state, even by accident
+*.json.orig
+oauth_creds.json
+auth.json
+.credentials.json
+.env
+.env.*

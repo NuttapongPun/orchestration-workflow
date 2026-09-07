@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orchestrate"
+  short_description: "Delegate work to the right worker subagent"
+  default_prompt: "Use $orchestrate to decompose this work, inspect available workers, route each task by tier, dispatch it, have it reviewed, and judge the result."
