@@ -49,7 +49,17 @@ Then start a **fresh** session:
 - **Claude Code, Codex, Antigravity:** type `/orchestrate`. The skill is user-invoked only; the model never triggers it on its own.
 - **OpenCode:** select the `orchestrate` primary agent. The skill is not used there. The agents use `openai/...` models, so the OpenAI provider must be connected first (see Runtime notes).
 
-**Update:** re-run the same command. **Uninstall:** `curl -fsSL .../install.sh | bash -s -- --uninstall`.
+**Update** (re-runs the installer; asks before replacing workers you changed):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
+```
+
+**Uninstall** (removes the skill and worker agents from every runtime):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --uninstall
+```
 
 ### Working on the repo itself
 
