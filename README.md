@@ -53,6 +53,8 @@ Then start a **fresh** session:
 - **Claude Code, Codex, Antigravity:** type `/orchestrate`. The skill is user-invoked only; the model never triggers it on its own.
 - **OpenCode:** select the `orchestrate` primary agent. The skill is not used there. The agents use `openai/...` models, so the OpenAI provider must be connected first (see Runtime notes).
 
+**Plan gate.** The orchestrator stops for your approval before the first wave that writes anything when a task is destructive or externally visible, when the plan is complex (two or more hard-tier implementation tasks, not counting review, or one whose wrong result is expensive to detect or undo), or when you asked for a plan, for example with "plan first". Otherwise it proceeds without asking. Read-only investigation still runs before the gate.
+
 **Update** (re-runs the installer; asks before replacing workers you changed):
 
 ```bash

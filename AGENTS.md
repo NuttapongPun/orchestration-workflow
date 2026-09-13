@@ -20,6 +20,7 @@ Preserve these when adapting. Each one closes a failure the workflow was built t
 - Reviewers run at the tier of the work they review, and the orchestrator judges the verdict itself, including whether the tests actually ran.
 - The skill is user-invoked only (`disable-model-invocation: true`). A model must never start orchestration on its own.
 - Read-only workers stay read-only at the runtime level where the runtime supports it, not only in the prompt.
+- The plan gate conditions are identical in the `SKILL` and `OPENCODE_ORCHESTRATE` literals in `build.py`, and `README.md` summarizes them. Change all three together, then rebuild.
 
 ## Branches
 

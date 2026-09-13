@@ -35,7 +35,7 @@ The reference file names the exact dispatch mechanism and model rule for that ru
 
 Translate the commander's request into an outcome and checkable acceptance criteria. Identify constraints, required artifacts, destructive or externally visible actions, and decisions that need the commander's authority.
 
-Ask the commander only when two readings of the request would produce materially different work: name the readings and let them pick. Otherwise make the smallest reasonable assumption and record it for the report.
+Ask the commander only when two readings of the request would produce materially different work: name the readings and let them pick. Otherwise make the smallest reasonable assumption and record it for the report. The phrase "plan first" in the request forces the plan gate.
 
 ## 2. Inspect the available workers
 
@@ -71,7 +71,17 @@ Arrange tasks as a dependency graph and dispatch ready tasks in concurrent waves
 
 Settle the stateful-tool question before grouping: a server holding one shared session, such as a browser, an editor, or a selected document, serializes. Stateless per-call APIs parallelize. Where unclear, serialize and say so in the report. Prefer read-only discovery in early waves and conflicting writes in later, serialized waves.
 
-## 6. Write self-contained briefs
+## 6. Plan gate
+
+Before dispatching the first wave that writes anything, check the plan against three conditions:
+
+- any task is destructive or externally visible: deletes or rewrites data, migrations, push, publish, deploy, messages, or state outside the repository
+- the plan is complex: two or more hard-tier implementation tasks, not counting review, or one hard-tier implementation task whose wrong result is expensive to detect or undo
+- the commander asked for a plan, for example with "plan first"
+
+If none hold, proceed. If any hold, stop and report **blocked on you: approve the plan**. The report lists the tasks, the worker and rationale for each, the waves, the assumptions, and which condition triggered the gate. Resume only on the commander's go, applying any amendments. Approval covers this plan; gate again if discovery changes the scope so a condition newly holds. Read-only `investigate` waves may run before the gate.
+
+## 7. Write self-contained briefs
 
 A worker starts blind. It has none of this conversation. Every brief carries:
 
@@ -84,13 +94,13 @@ A worker starts blind. It has none of this conversation. Every brief carries:
 
 For review tasks, provide the raw artifacts and neutral criteria, not the implementer's conclusions.
 
-## 7. Dispatch and adapt
+## 8. Dispatch and adapt
 
 Dispatch every ready task in a wave concurrently, using the mechanism in the runtime reference. Never use a dispatch mode that ignores the model override. While workers run, do only orchestrator work that does not conflict with their scopes.
 
-Adapt from evidence: reassign when a different worker is clearly better suited, narrow or expand a brief when discovery changes the real boundary, stop duplicate work once one branch resolves the uncertainty, and retry with the failure evidence and a materially improved brief, never the same request. Do not abandon usable partial results when one worker fails.
+Adapt from evidence: reassign when a different worker is clearly better suited, narrow or expand a brief when discovery changes the real boundary, re-run the plan gate when a boundary change makes a gate condition newly hold, stop duplicate work once one branch resolves the uncertainty, and retry with the failure evidence and a materially improved brief, never the same request. Do not abandon usable partial results when one worker fails.
 
-## 8. Review and judge
+## 9. Review and judge
 
 After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, and the list of changed files.
 
@@ -102,7 +112,7 @@ Treat every worker summary and every review verdict as a claim. Your job is to j
 
 If review finds real problems, send a fix task to the responsible worker with the reviewer's specific findings, then re-review. Stop after three rounds and report what remains. Start dependent waves only after their inputs are verified sufficiently for use.
 
-## 9. Report once
+## 10. Report once
 
 When the last wave closes, tell the commander in one message:
 
