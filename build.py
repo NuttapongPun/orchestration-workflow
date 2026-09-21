@@ -18,6 +18,10 @@ ROOT = pathlib.Path(__file__).resolve().parent
 TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "easy", "review-hard": "hard"}
 READONLY = {"investigate", "review", "review-hard"}
 EFFORT = {"investigate": "medium", "easy-worker": "medium", "hard-worker": "high", "review": "medium", "review-hard": "high"}
+# Codex and OpenCode: tuned for ChatGPT subscription limits, where reasoning tokens count against the 5-hour window.
+# review-hard stays high so it still catches what a medium-effort hard-worker misses.
+EFFORT_OPENAI = {**EFFORT, "investigate": "low", "hard-worker": "medium"}
+OPENCODE_PM_EFFORT = "medium"
 
 MODELS = {
     "claude":      {"easy": "sonnet",        "hard": "opus"},
@@ -230,7 +234,7 @@ for n, body in BODIES.items():
           f'name = "{n}"\n'
           f'description = "{DESC[n]}"\n'
           f'model = "{MODELS["codex"][TIER[n]]}"\n'
-          f'model_reasoning_effort = "{EFFORT[n]}"\n'
+          f'model_reasoning_effort = "{EFFORT_OPENAI[n]}"\n'
           f'sandbox_mode = "{sandbox}"\n'
           f'developer_instructions = """\n{body}"""\n')
 
@@ -266,13 +270,13 @@ for n, body in BODIES.items():
         perm = ["permission:", "  edit: allow", "  bash: allow", "  task: deny"]
         temp = "0.2"
     fm = ["---", f"description: {DESC[n]}", "mode: subagent", f"model: {MODELS['opencode'][TIER[n]]}",
-          f"reasoningEffort: {EFFORT[n]}", f"temperature: {temp}", f"color: {COLOR[n]}"] + perm + ["---", ""]
+          f"reasoningEffort: {EFFORT_OPENAI[n]}", f"temperature: {temp}", f"color: {COLOR[n]}"] + perm + ["---", ""]
     write(f"agents/opencode/{n}.md", "\n".join(fm) + "\n" + body)
 
 write("agents/opencode/orchestrate.md", "\n".join([
     "---",
     "description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing",
-    "mode: primary", f"model: {OPENCODE_PM_MODEL}", "reasoningEffort: high", "temperature: 0.2", "color: primary",
+    "mode: primary", f"model: {OPENCODE_PM_MODEL}", f"reasoningEffort: {OPENCODE_PM_EFFORT}", "temperature: 0.2", "color: primary",
     "permission:", "  edit: deny", "  bash:", '    "*": ask', '    "git status*": allow', '    "git diff*": allow',
     '    "git log*": allow', '    "ls *": allow', "  task:", '    "*": deny'] +
     [f'    "{w}": allow' for w in BODIES] + ["---", ""]) + "\n" + OPENCODE_ORCHESTRATE)

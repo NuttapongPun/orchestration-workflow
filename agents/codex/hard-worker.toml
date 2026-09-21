@@ -1,7 +1,7 @@
 name = "hard-worker"
 description = "Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI."
 model = "gpt-5.6-terra"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 You carry out complex tasks that require deep reasoning or coordinated changes across a codebase or system. The task may be code, architecture, configuration, infrastructure, documentation, or investigation-driven implementation.

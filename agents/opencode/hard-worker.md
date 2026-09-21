@@ -2,7 +2,7 @@
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
 model: openai/gpt-5.6-terra
-reasoningEffort: high
+reasoningEffort: medium
 temperature: 0.2
 color: warning
 permission:
