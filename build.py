@@ -239,8 +239,8 @@ for n, body in BODIES.items():
           f'developer_instructions = """\n{body}"""\n')
 
 # ------------------------------------------------------------------ Antigravity
-AG_READ = ["view_file", "view_file_outline", "view_code_item", "read_file", "grep_search", "find_by_name", "list_dir",
-           "run_command", "command_status", "read_terminal", "search_web", "read_url_content"]
+AG_READ = ["view_file", "read_file", "grep_search", "find_by_name", "list_dir",
+           "run_command", "search_web", "read_url_content"]
 AG_WRITE = AG_READ + ["write_file", "write_to_file", "create_file", "edit_file", "replace_file_content",
                       "multi_replace_file_content", "delete_file"]
 for n, body in BODIES.items():

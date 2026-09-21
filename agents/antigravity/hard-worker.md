@@ -7,15 +7,11 @@ model: pro
 commandExecutionPolicy: auto
 tools:
   - view_file
-  - view_file_outline
-  - view_code_item
   - read_file
   - grep_search
   - find_by_name
   - list_dir
   - run_command
-  - command_status
-  - read_terminal
   - search_web
   - read_url_content
   - write_file
