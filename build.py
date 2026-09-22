@@ -44,7 +44,7 @@ MODELS = {
 # here because BODIES is defined further down; the OpenCode section re-checks the two agree.
 OC_AGENTS = ["orchestrate", "investigate", "easy-worker", "hard-worker", "review", "review-hard"]
 OC_EFFORTS = {"orchestrate": "low", "investigate": "low", "easy-worker": "medium",
-              "hard-worker": "medium", "review": "medium", "review-hard": "high"}
+              "hard-worker": "high", "review": "medium", "review-hard": "high"}
 
 def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
     """Expand the usual pm/hard/easy shape into the six per-agent entries.
@@ -74,10 +74,10 @@ OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
     # it is unverified whether OpenCode Zen honours reasoningEffort for these, so it is omitted.
     "free":              oc_stack("opencode/muse-spark-1.3-contributor-free", "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
-    "openai":            oc_stack("openai/gpt-6-astra",                     "openai/gpt-5.6-terra",             "openai/gpt-5.6-luna"),
-    "openai-openrouter": oc_stack("openrouter/openai/gpt-5.6-sol",          "openrouter/openai/gpt-5.6-terra",  "openrouter/openai/gpt-5.6-luna"),
-    "claude":            oc_stack("anthropic/claude-fable-5-1",             "anthropic/claude-opus-5",          "anthropic/claude-sonnet-5"),
-    "claude-openrouter": oc_stack("openrouter/anthropic/claude-fable-5.1",  "openrouter/anthropic/claude-opus-5", "openrouter/anthropic/claude-sonnet-5"),
+    "openai":            oc_stack("openai/gpt-6-astra",                     "openai/gpt-6-sol",                 "openai/gpt-6-luna"),
+    "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna"),
+    "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5"),
+    "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5"),
     "cheap-openrouter":  oc_stack("openrouter/moonshotai/kimi-k3",          "openrouter/z-ai/glm-5.3",          "openrouter/deepseek/deepseek-v4-flash-0731"),
 }
 

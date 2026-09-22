@@ -1,7 +1,7 @@
 ---
 description: Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live.
 mode: subagent
-model: openrouter/openai/gpt-5.6-luna
+model: openrouter/openai/gpt-6-luna
 reasoningEffort: low
 temperature: 0.1
 color: info

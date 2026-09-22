@@ -119,23 +119,23 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
-| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6-astra` | `openrouter/openai/gpt-5.6-sol` | `anthropic/claude-fable-5-1` | `openrouter/anthropic/claude-fable-5.1` | `openrouter/moonshotai/kimi-k3` |
-| `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-5.6-luna` | `openrouter/openai/gpt-5.6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
-| `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-5.6-luna` | `openrouter/openai/gpt-5.6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
-| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-5.6-terra` | `openrouter/openai/gpt-5.6-terra` | `anthropic/claude-opus-5` | `openrouter/anthropic/claude-opus-5` | `openrouter/z-ai/glm-5.3` |
-| `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-5.6-luna` | `openrouter/openai/gpt-5.6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
-| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-5.6-terra` | `openrouter/openai/gpt-5.6-terra` | `anthropic/claude-opus-5` | `openrouter/anthropic/claude-opus-5` | `openrouter/z-ai/glm-5.3` |
+| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6-astra` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/moonshotai/kimi-k3` |
+| `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
+| `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
+| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6-sol` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
+| `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
+| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6-sol` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
 
-**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. `None` means the generated agent file gets no `reasoningEffort:` line at all, which is what you want for a model that has no effort parameter. Every stack except `free` uses `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` medium, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified whether OpenCode Zen honours the field for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
+**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. `None` means the generated agent file gets no `reasoningEffort:` line at all, which is what you want for a model that has no effort parameter. Every stack except `free` uses `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified whether OpenCode Zen honours the field for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
 
 Rough cost per million tokens (input / output), OpenRouter list prices in September 2026:
 
 | Model | Input | Output |
 |---|---|---|
 | Muse Spark 1.3 (contributor)† / MiMo V2.6 Flash / Nemotron 3.5 Lightning, free on OpenCode Zen | $0 | $0 |
-| GPT-5.6 Sol / Terra / Luna | $2 / $2 / $0.20 | $10 / $12 / $1.20 |
+| GPT-6 Sol / Luna | $2 / $0.10 | $10 / $0.50 |
 | GPT-6 Astra | $10 | $50 |
-| Claude Fable 5.1 / Opus 5 / Sonnet 5 | $10 / $5 / $2 | $50 / $25 / $10 |
+| Claude Opus 5.5 / Sonnet 5 | $4 / $2 | $20 / $10 |
 | Kimi K3 / GLM 5.3 / DeepSeek V4 Flash 0731 | $3 / $1.40 / $0.14 | $15 / $4.40 / $0.28 |
 
 † **Contributor model.** `muse-spark-1.3-contributor-free` is free because it is offered on contributor terms: Meta may use the prompts and completions you send it to train future models. Everything the orchestrator sees, including file paths, code, and worker reports, goes through it. Do not use the `free` stack on confidential code; install `--opencode-stack=openai` or `--opencode-stack=claude` instead.
@@ -144,9 +144,9 @@ Notes:
 
 - The `free` stack costs nothing and is the default so the workflow runs out of the box. Vendor-reported specs: MiMo V2.6 Flash has a 200K context and its family claims 73.4% on SWE-bench Verified, which is why it takes the hard tier; Muse Spark 1.3 has a 1M context, useful for an orchestrator that accumulates worker reports; Nemotron 3.5 Lightning has a 262K context and is the fastest of the three (around 297 tok/s per Artificial Analysis) but the weakest reasoner, so it takes the easy tier. Expect weaker routing judgment than the paid stacks give you, and read the review verdicts yourself.
 - Other free OpenCode Zen models you can swap into any agent of the `free` stack in `OPENCODE_STACKS`, with their known problems: `opencode/nemotron-3-ultra-free` (reported stream timeouts during tool execution), `opencode/ling-3.0-flash-fin-free` (finance-tuned), `opencode/muse-spark-1.2-contributor-free` (same contributor terms as 1.3), `opencode/big-pickle` (many reports of corrupted output).
-- The Claude stack mirrors what the Claude Code runtime uses natively (Fable as orchestrator, Opus hard, Sonnet easy). Pick `claude` with an Anthropic key, or `claude-openrouter` to route it through OpenRouter.
+- The Claude stack mirrors what the Claude Code runtime uses natively (Opus 5.5 as orchestrator and hard tier, Sonnet easy). Pick `claude` with an Anthropic key, or `claude-openrouter` to route it through OpenRouter.
 - The cheap stack keeps the same three-role shape at roughly a tenth of the cost. Expect weaker routing judgment from the orchestrator; the review step matters more there. `openrouter/z-ai/glm-5.3-flash` is an even cheaper easy-worker option.
-- Anthropic's direct IDs use dashes in the version (`claude-fable-5-1`); OpenRouter's use dots (`claude-fable-5.1`). Both are correct for their provider.
+- Anthropic's direct IDs use dashes in the version (`claude-opus-5-5`); OpenRouter's use dots (`claude-opus-5.5`). Both are correct for their provider.
 - All stacks are generated, so switching is an install-time choice, not a rebuild: re-run the installer with a different `--opencode-stack=<name>` and start a fresh OpenCode session. To add a stack or change one agent's model or effort, edit `OPENCODE_STACKS` in `build.py`, run `python3 build.py`, then re-install with the flag. The `oc_stack()` helper there fills the six entries from the usual orchestrator/hard/easy trio; override a single agent afterwards when you want it to differ. `build.py` refuses to build a stack that is missing an agent, names an agent that does not exist, or uses an effort other than `low`, `medium`, `high`, or `None`.
 
 ## Customize
@@ -188,7 +188,7 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
   ```
 
   If your install does ask for a credential, run `opencode auth login` and pick OpenCode Zen. Free models are rate-limited and can be withdrawn; read the contributor-terms warning under "OpenCode model stacks" before pointing this stack at private code.
-- **If you pick the `openai` stack, connect the OpenAI provider first.** Those agents reference `openai/gpt-6-astra`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. Link the provider once, either with a ChatGPT login or an API key:
+- **If you pick the `openai` stack, connect the OpenAI provider first.** Those agents reference `openai/gpt-6-astra`, `openai/gpt-6-sol`, and `openai/gpt-6-luna`. Link the provider once, either with a ChatGPT login or an API key:
 
   ```bash
   opencode auth login      # choose OpenAI, then ChatGPT login or API key

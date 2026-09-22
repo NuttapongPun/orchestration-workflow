@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, runs tests, returns a verdict.
 mode: subagent
-model: openrouter/openai/gpt-5.6-terra
+model: openrouter/openai/gpt-6-sol
 reasoningEffort: high
 temperature: 0.1
 color: warning

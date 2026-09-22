@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, runs tests, returns a verdict.
 mode: subagent
-model: openrouter/anthropic/claude-opus-5
+model: openrouter/anthropic/claude-opus-5.5
 reasoningEffort: high
 temperature: 0.1
 color: warning

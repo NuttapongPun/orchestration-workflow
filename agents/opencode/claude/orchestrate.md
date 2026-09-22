@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing
 mode: primary
-model: anthropic/claude-fable-5-1
+model: anthropic/claude-opus-5-5
 reasoningEffort: low
 temperature: 0.2
 color: primary

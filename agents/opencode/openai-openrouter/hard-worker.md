@@ -1,8 +1,8 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: openrouter/openai/gpt-5.6-terra
-reasoningEffort: medium
+model: openrouter/openai/gpt-6-sol
+reasoningEffort: high
 temperature: 0.2
 color: warning
 permission:

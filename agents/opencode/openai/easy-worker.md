@@ -1,7 +1,7 @@
 ---
 description: Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content.
 mode: subagent
-model: openai/gpt-5.6-luna
+model: openai/gpt-6-luna
 reasoningEffort: medium
 temperature: 0.2
 color: success

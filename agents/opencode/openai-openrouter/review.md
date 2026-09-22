@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for easy-tier work. Verifies changes against requirements, hunts for defects, runs tests, returns a verdict.
 mode: subagent
-model: openrouter/openai/gpt-5.6-luna
+model: openrouter/openai/gpt-6-luna
 reasoningEffort: medium
 temperature: 0.1
 color: warning

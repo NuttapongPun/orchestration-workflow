@@ -2,7 +2,7 @@
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
 model: openrouter/z-ai/glm-5.3
-reasoningEffort: medium
+reasoningEffort: high
 temperature: 0.2
 color: warning
 permission:

@@ -1,8 +1,8 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: openrouter/anthropic/claude-opus-5
-reasoningEffort: medium
+model: openrouter/anthropic/claude-opus-5.5
+reasoningEffort: high
 temperature: 0.2
 color: warning
 permission:
