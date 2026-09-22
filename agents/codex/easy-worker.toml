@@ -1,6 +1,6 @@
 name = "easy-worker"
 description = "Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content."
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """

@@ -1,6 +1,6 @@
 name = "investigate"
 description = "Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live."
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """

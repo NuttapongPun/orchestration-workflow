@@ -24,11 +24,11 @@ The same five workers exist in every runtime, with identical prompts. Only the m
 
 | Worker | Tier | Claude Code | Codex | Antigravity | OpenCode\* |
 |---|---|---|---|---|---|
-| `investigate` | easy, read-only | sonnet | gpt-5.6-luna | flash | nemotron-3.5-lightning-free |
-| `easy-worker` | easy | sonnet | gpt-5.6-luna | flash | nemotron-3.5-lightning-free |
-| `hard-worker` | hard | opus | gpt-5.6-terra | pro | mimo-v2.6-flash-free |
-| `review` | easy, read-only | sonnet | gpt-5.6-luna | flash | nemotron-3.5-lightning-free |
-| `review-hard` | hard, read-only | opus | gpt-5.6-terra | pro | mimo-v2.6-flash-free |
+| `investigate` | easy, read-only | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
+| `easy-worker` | easy | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
+| `hard-worker` | hard | opus | gpt-6-sol | pro | mimo-v2.6-flash-free |
+| `review` | easy, read-only | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
+| `review-hard` | hard, read-only | opus | gpt-6-sol | pro | mimo-v2.6-flash-free |
 
 \* The OpenCode column shows the default `free` stack. OpenCode's models are chosen per install with `--opencode-stack=<name>`; see [OpenCode model stacks](#opencode-model-stacks).
 
@@ -83,8 +83,8 @@ The orchestrator role is played by whatever model your session runs, so pick the
 
 | Runtime | Suggested orchestrator | How to set |
 |---|---|---|
-| Claude Code | Fable 5.1, or Opus 5 | `/model` |
-| Codex | GPT-6 Astra if your plan has it, else GPT-5.6 Sol | `/model` |
+| Claude Code | Fable 5.1, or Opus 5.5 | `/model` |
+| Codex | GPT-6 Astra if your plan has it, else GPT-6 Sol | `/model` |
 | Antigravity CLI | Gemini 3.1 Pro (High) | session model setting; `--agent` is ignored when resuming, so start fresh |
 | OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; the paid stacks run their orchestrator at low effort | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
 

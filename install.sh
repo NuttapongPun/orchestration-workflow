@@ -233,8 +233,8 @@ cat <<EOF
 Done. Start a FRESH session and run /orchestrate (OpenCode: select the 'orchestrate' primary agent).
 
 Run the orchestrator on the strongest model you have. Suggested:
-  Claude Code      /model -> Fable 5.1 (or Opus 5)
-  Codex            /model -> GPT-6 Astra if available, else GPT-5.6 Sol
+  Claude Code      /model -> Fable 5.1 (or Opus 5.5)
+  Codex            /model -> GPT-6 Astra if available, else GPT-6 Sol
   Antigravity CLI  session model -> Gemini 3.1 Pro (High)
   OpenCode         the 'orchestrate' primary agent pins its model in agents/opencode/$OC_STACK/orchestrate.md
                    (installed stack: $OC_STACK; re-run with --opencode-stack=<name> to switch)
