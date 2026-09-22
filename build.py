@@ -7,8 +7,8 @@ Outputs (all inside this repo, never in $HOME):
   agents/claude/*.md           Claude Code subagents
   agents/codex/*.toml          Codex custom subagents
   agents/antigravity/*.md      Antigravity CLI (agy) subagents
-  agents/opencode/*.md         OpenCode subagents + primary orchestrate agent
-install.sh links these into each runtime.
+  agents/opencode/<stack>/*.md OpenCode subagents + primary orchestrate agent, one dir per model stack
+install.sh links these into each runtime (OpenCode: the stack chosen with --opencode-stack=<name>).
 """
 import pathlib
 
@@ -18,10 +18,10 @@ ROOT = pathlib.Path(__file__).resolve().parent
 TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "easy", "review-hard": "hard"}
 READONLY = {"investigate", "review", "review-hard"}
 EFFORT = {"investigate": "medium", "easy-worker": "medium", "hard-worker": "high", "review": "medium", "review-hard": "high"}
-# Codex and OpenCode: tuned for ChatGPT subscription limits, where reasoning tokens count against the 5-hour window.
+# Codex only: tuned for ChatGPT subscription limits, where reasoning tokens count against the 5-hour window.
 # review-hard stays high so it still catches what a medium-effort hard-worker misses.
+# OpenCode does not use this table; its effort is set per agent in OPENCODE_STACKS below.
 EFFORT_OPENAI = {**EFFORT, "investigate": "low", "hard-worker": "medium"}
-OPENCODE_PM_EFFORT = "low"
 
 MODELS = {
     "claude":      {"easy": "sonnet",        "hard": "opus"},
@@ -29,18 +29,73 @@ MODELS = {
     "antigravity": {"easy": "flash",         "hard": "pro"},
 }
 
-# OpenCode: pick one stack. Model IDs are OpenCode's provider/model form (see `opencode models`).
+# ------------------------------------------------------------------ OpenCode model stacks
+# Every stack below is generated into its own directory, agents/opencode/<stack>/, and the
+# one to install is chosen at install time:
+#   ./install.sh --opencode-stack=<name>        (default: free)
+#
+# A stack is one entry per OpenCode agent: {"model": "<provider/model>", "effort": <level>},
+# where <level> is "low", "medium", "high", or None to leave `reasoningEffort:` out of the
+# generated file entirely (for a model that has no effort parameter). Model and effort are
+# independent per agent, so `investigate` can differ from the other easy-tier agents.
+# Model IDs are OpenCode's provider/model form (see `opencode models`).
 # Prices and alternatives are described in README.md, "OpenCode model stacks".
+# The six OpenCode agents: the primary orchestrator plus every worker in BODIES. Spelled out
+# here because BODIES is defined further down; the OpenCode section re-checks the two agree.
+OC_AGENTS = ["orchestrate", "investigate", "easy-worker", "hard-worker", "review", "review-hard"]
+OC_EFFORTS = {"orchestrate": "low", "investigate": "low", "easy-worker": "medium",
+              "hard-worker": "medium", "review": "medium", "review-hard": "high"}
+
+def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
+    """Expand the usual pm/hard/easy shape into the six per-agent entries.
+
+    `effort` is either one value (including None) applied to every agent, or a dict
+    keyed by agent name. In a dict, every key must be an agent name -- an unknown key
+    is an error, so a typo fails the build instead of silently becoming None -- and an
+    agent left out keeps its OC_EFFORTS default, which makes a partial override safe:
+        oc_stack(..., effort={"investigate": "high"})   # the other five stay standard
+
+    The result is a plain dict, so a stack can also override one agent afterwards:
+        s = oc_stack(...); s["investigate"]["model"] = "..."
+    """
+    model = {"orchestrate": pm, "investigate": easy, "easy-worker": easy,
+             "hard-worker": hard, "review": easy, "review-hard": hard}
+    if isinstance(effort, dict):
+        unknown = [k for k in effort if k not in OC_AGENTS]
+        if unknown:
+            raise SystemExit(f"oc_stack(): effort dict has unknown agent key(s) {unknown}; "
+                             f"keys must come from {OC_AGENTS}")
+        per_agent = {**OC_EFFORTS, **effort}
+    else:
+        per_agent = {a: effort for a in OC_AGENTS}
+    return {a: {"model": model[a], "effort": per_agent[a]} for a in OC_AGENTS}
+
 OPENCODE_STACKS = {
-    "openai":            {"pm": "openai/gpt-6-astra",                     "hard": "openai/gpt-5.6-terra",             "easy": "openai/gpt-5.6-luna"},
-    "openai-openrouter": {"pm": "openrouter/openai/gpt-5.6-sol",         "hard": "openrouter/openai/gpt-5.6-terra",  "easy": "openrouter/openai/gpt-5.6-luna"},
-    "claude":            {"pm": "anthropic/claude-fable-5-1",            "hard": "anthropic/claude-opus-5",          "easy": "anthropic/claude-sonnet-5"},
-    "claude-openrouter": {"pm": "openrouter/anthropic/claude-fable-5.1", "hard": "openrouter/anthropic/claude-opus-5", "easy": "openrouter/anthropic/claude-sonnet-5"},
-    "cheap-openrouter":  {"pm": "openrouter/moonshotai/kimi-k3",         "hard": "openrouter/z-ai/glm-5.3",          "easy": "openrouter/deepseek/deepseek-v4-flash-0731"},
+    # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
+    # it is unverified whether OpenCode Zen honours reasoningEffort for these, so it is omitted.
+    "free":              oc_stack("opencode/muse-spark-1.3-contributor-free", "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
+    "openai":            oc_stack("openai/gpt-6-astra",                     "openai/gpt-5.6-terra",             "openai/gpt-5.6-luna"),
+    "openai-openrouter": oc_stack("openrouter/openai/gpt-5.6-sol",          "openrouter/openai/gpt-5.6-terra",  "openrouter/openai/gpt-5.6-luna"),
+    "claude":            oc_stack("anthropic/claude-fable-5-1",             "anthropic/claude-opus-5",          "anthropic/claude-sonnet-5"),
+    "claude-openrouter": oc_stack("openrouter/anthropic/claude-fable-5.1",  "openrouter/anthropic/claude-opus-5", "openrouter/anthropic/claude-sonnet-5"),
+    "cheap-openrouter":  oc_stack("openrouter/moonshotai/kimi-k3",          "openrouter/z-ai/glm-5.3",          "openrouter/deepseek/deepseek-v4-flash-0731"),
 }
-OPENCODE_STACK = "openai"
-MODELS["opencode"] = {"easy": OPENCODE_STACKS[OPENCODE_STACK]["easy"], "hard": OPENCODE_STACKS[OPENCODE_STACK]["hard"]}
-OPENCODE_PM_MODEL = OPENCODE_STACKS[OPENCODE_STACK]["pm"]
+
+OC_EFFORT_LEVELS = ("low", "medium", "high", None)
+for _stack, _spec in OPENCODE_STACKS.items():
+    _missing = [a for a in OC_AGENTS if a not in _spec]
+    _extra = [a for a in _spec if a not in OC_AGENTS]
+    if _missing or _extra:
+        raise SystemExit(f"OPENCODE_STACKS['{_stack}']: every stack needs exactly the six agents {OC_AGENTS}"
+                         + (f"; missing {_missing}" if _missing else "") + (f"; unexpected {_extra}" if _extra else ""))
+    for _agent, _entry in _spec.items():
+        if not isinstance(_entry, dict) or set(_entry) != {"model", "effort"}:
+            raise SystemExit(f"OPENCODE_STACKS['{_stack}']['{_agent}']: expected {{'model': ..., 'effort': ...}}, got {_entry!r}")
+        if not isinstance(_entry["model"], str) or not _entry["model"]:
+            raise SystemExit(f"OPENCODE_STACKS['{_stack}']['{_agent}']['model']: expected a non-empty provider/model string, got {_entry['model']!r}")
+        if _entry["effort"] not in OC_EFFORT_LEVELS:
+            raise SystemExit(f"OPENCODE_STACKS['{_stack}']['{_agent}']['effort']: expected one of "
+                             f"'low', 'medium', 'high' or None, got {_entry['effort']!r}")
 
 # ------------------------------------------------------------------ prompts
 DESC = {
@@ -255,29 +310,42 @@ OC_TEST_CMDS = ["git diff*", "git log*", "git show*", "git status*", "npm test*"
                 "cargo test*", "cargo check*", "cargo clippy*", "make test*"]
 OC_READ_CMDS = ["ls *", "find *", "cat *", "head *", "tail *", "wc *", "git log*", "git show*", "git diff*", "git blame*", "git status*"]
 COLOR = {"investigate": "info", "easy-worker": "success", "hard-worker": "warning", "review": "warning", "review-hard": "warning"}
-for n, body in BODIES.items():
-    if n == "investigate":
-        perm = ["permission:", "  edit: deny", "  webfetch: allow", "  websearch: allow", "  bash:", '    "*": deny'] + \
-               [f'    "{c}": allow' for c in OC_READ_CMDS] + ["  task: deny"]
-        temp = "0.1"
-    elif n in READONLY:
-        perm = ["permission:", "  edit: deny", "  task: deny", "  bash:", '    "*": ask'] + \
-               [f'    "{c}": allow' for c in OC_TEST_CMDS]
-        temp = "0.1"
-    else:
-        perm = ["permission:", "  edit: allow", "  bash: allow", "  task: deny"]
-        temp = "0.2"
-    fm = ["---", f"description: {DESC[n]}", "mode: subagent", f"model: {MODELS['opencode'][TIER[n]]}",
-          f"reasoningEffort: {EFFORT_OPENAI[n]}", f"temperature: {temp}", f"color: {COLOR[n]}"] + perm + ["---", ""]
-    write(f"agents/opencode/{n}.md", "\n".join(fm) + "\n" + body)
+# OC_AGENTS is written out above, before BODIES exists; renaming a worker must not leave the
+# stacks keyed by the old name, so check the two agree now that BODIES is defined.
+if OC_AGENTS != ["orchestrate", *BODIES]:
+    raise SystemExit(f"OC_AGENTS {OC_AGENTS} no longer matches the workers in BODIES "
+                     f"{['orchestrate', *BODIES]}; update OC_AGENTS and every stack in OPENCODE_STACKS")
 
-write("agents/opencode/orchestrate.md", "\n".join([
-    "---",
-    "description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing",
-    "mode: primary", f"model: {OPENCODE_PM_MODEL}", f"reasoningEffort: {OPENCODE_PM_EFFORT}", "temperature: 0.2", "color: primary",
-    "permission:", "  edit: deny", "  bash:", '    "*": ask', '    "git status*": allow', '    "git diff*": allow',
-    '    "git log*": allow', '    "ls *": allow', "  task:", '    "*": deny'] +
-    [f'    "{w}": allow' for w in BODIES] + ["---", ""]) + "\n" + OPENCODE_ORCHESTRATE)
+# Every stack is generated; install.sh installs the one named by --opencode-stack=<name>.
+def oc_effort_line(entry):
+    """`reasoningEffort:` for this agent, or nothing at all when the stack sets effort to None."""
+    return [] if entry["effort"] is None else [f"reasoningEffort: {entry['effort']}"]
+
+for stack, stack_spec in OPENCODE_STACKS.items():
+    for n, body in BODIES.items():
+        if n == "investigate":
+            perm = ["permission:", "  edit: deny", "  webfetch: allow", "  websearch: allow", "  bash:", '    "*": deny'] + \
+                   [f'    "{c}": allow' for c in OC_READ_CMDS] + ["  task: deny"]
+            temp = "0.1"
+        elif n in READONLY:
+            perm = ["permission:", "  edit: deny", "  task: deny", "  bash:", '    "*": ask'] + \
+                   [f'    "{c}": allow' for c in OC_TEST_CMDS]
+            temp = "0.1"
+        else:
+            perm = ["permission:", "  edit: allow", "  bash: allow", "  task: deny"]
+            temp = "0.2"
+        fm = ["---", f"description: {DESC[n]}", "mode: subagent", f"model: {stack_spec[n]['model']}"] + \
+             oc_effort_line(stack_spec[n]) + [f"temperature: {temp}", f"color: {COLOR[n]}"] + perm + ["---", ""]
+        write(f"agents/opencode/{stack}/{n}.md", "\n".join(fm) + "\n" + body)
+
+    write(f"agents/opencode/{stack}/orchestrate.md", "\n".join([
+        "---",
+        "description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing",
+        "mode: primary", f"model: {stack_spec['orchestrate']['model']}"] +
+        oc_effort_line(stack_spec["orchestrate"]) + ["temperature: 0.2", "color: primary",
+        "permission:", "  edit: deny", "  bash:", '    "*": ask', '    "git status*": allow', '    "git diff*": allow',
+        '    "git log*": allow', '    "ls *": allow', "  task:", '    "*": deny'] +
+        [f'    "{w}": allow' for w in BODIES] + ["---", ""]) + "\n" + OPENCODE_ORCHESTRATE)
 
 # ------------------------------------------------------------------ Skill
 SKILL = """---

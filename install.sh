@@ -9,8 +9,13 @@
 # Codex agent files are the exception and are always copied, since Codex rejects symlinked roles):
 #   ./install.sh
 #
-# Flags:  --yes        replace existing installed files without asking
-#         --copy       force copy mode even when run from a clone
+# Flags:  --yes                    replace existing installed files without asking
+#         --copy                   force copy mode even when run from a clone
+#         --link                   force link mode (the default when run from a clone)
+#         --opencode-stack=<name>  which OpenCode model stack to install (default: free).
+#                                  <name> is a plain directory name under agents/opencode/
+#                                  (no slash, no leading dot). The names there today are:
+#                                  free, openai, openai-openrouter, claude, claude-openrouter, cheap-openrouter
 #         --uninstall  remove everything this script installed
 set -euo pipefail
 
@@ -20,18 +25,20 @@ REPO_SLUG="NuttapongPun/orchestration-workflow"
 TARBALL="https://github.com/$REPO_SLUG/archive/refs/heads/main.tar.gz"
 CANON="$HOME/.agents/skills/orchestrate"        # canonical skill location (what the `skills` CLI uses)
 
-YES=0; MODE=""; UNINSTALL=0
+YES=0; MODE=""; UNINSTALL=0; OC_STACK="free"
 for a in "$@"; do case "$a" in
   --yes|-y) YES=1;; --copy) MODE="copy";; --link) MODE="link";; --uninstall) UNINSTALL=1;;
+  --opencode-stack=*) OC_STACK="${a#*=}";;
   *) echo "unknown flag: $a" >&2; exit 2;;
 esac; done
 
 # name | detect dir | agents dir | agents source subdir | skills dir ("" = runtime reads ~/.agents/skills itself)
+# OpenCode's source subdir carries the chosen model stack; every stack is pre-generated under agents/opencode/.
 RUNTIMES=(
   "Claude Code|$HOME/.claude|$HOME/.claude/agents|claude|$HOME/.claude/skills"
   "Codex|$HOME/.codex|$HOME/.codex/agents|codex|$HOME/.codex/skills"
   "Antigravity CLI|$HOME/.gemini/config|$HOME/.gemini/config/agents|antigravity|$HOME/.gemini/config/skills"
-  "OpenCode|$HOME/.config/opencode|$HOME/.config/opencode/agents|opencode|"
+  "OpenCode|$HOME/.config/opencode|$HOME/.config/opencode/agents|opencode/$OC_STACK|"
 )
 
 say()  { printf '%s\n' "$*"; }
@@ -59,6 +66,7 @@ copy_only() { [[ "$1" == "codex" ]]; }
 if [[ $UNINSTALL -eq 1 ]]; then
   for rt in "${RUNTIMES[@]}"; do
     IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
+    # File names, not the source subdir: the OpenCode agents are removed whichever stack installed them.
     for w in investigate easy-worker hard-worker review review-hard orchestrate; do
       for ext in md toml; do f="$agents_dir/$w.$ext"; [[ -e "$f" || -L "$f" ]] && rm -f "$f" && say "removed $f"; done
     done
@@ -83,6 +91,21 @@ else
   SRC="$(find "$TMP" -maxdepth 1 -mindepth 1 -type d | head -1)"
 fi
 say "Mode: $MODE   Source: $SRC"
+
+# ------------------------------------------------------------------ OpenCode stack
+# The stack name is used as a path component, so it must be a plain directory name: not empty
+# (which would resolve to agents/opencode/ itself and install the stack dirs as agent files),
+# no slash (../antigravity would install another runtime's files), no leading dot. That also
+# keeps the -d test below from being talked into anything outside agents/opencode/.
+oc_stack_name_ok() { [[ -n "$1" && "$1" != */* && "$1" != .* ]]; }
+if ! oc_stack_name_ok "$OC_STACK" || [[ ! -d "$SRC/agents/opencode/$OC_STACK" ]]; then
+  OC_AVAIL=""
+  for d in "$SRC/agents/opencode"/*/; do [[ -d "$d" ]] && OC_AVAIL+=" $(basename "$d")"; done
+  { printf 'unknown OpenCode stack: %s\n' "$OC_STACK"
+    if [[ -n "$OC_AVAIL" ]]; then printf 'available stacks:%s\n' "$OC_AVAIL"
+    else printf 'no stacks found in %s (run python3 build.py in the clone)\n' "$SRC/agents/opencode"; fi; } >&2
+  exit 2
+fi
 
 # ------------------------------------------------------------------ detect runtimes
 FOUND=(); MISSING=()
@@ -189,7 +212,7 @@ fi
 # ------------------------------------------------------------------ per-runtime
 for rt in "${FOUND[@]}"; do
   IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
-  say "$name:"
+  if [[ "$src" == opencode/* ]]; then say "$name (stack: ${src#opencode/}):"; else say "$name:"; fi
   co=0; copy_only "$src" && co=1
   for f in "$SRC/agents/$src"/*; do place "$f" "$agents_dir/$(basename "$f")" "$co"; done
   if [[ -n "$skills_dir" ]]; then
@@ -213,7 +236,8 @@ Run the orchestrator on the strongest model you have. Suggested:
   Claude Code      /model -> Fable 5.1 (or Opus 5)
   Codex            /model -> GPT-6 Astra if available, else GPT-5.6 Sol
   Antigravity CLI  session model -> Gemini 3.1 Pro (High)
-  OpenCode         the 'orchestrate' primary agent pins its model in agents/opencode/orchestrate.md
+  OpenCode         the 'orchestrate' primary agent pins its model in agents/opencode/$OC_STACK/orchestrate.md
+                   (installed stack: $OC_STACK; re-run with --opencode-stack=<name> to switch)
 
 Update later: re-run this command$( [[ "$MODE" == "link" ]] && printf ', or git pull in the clone' ).
 EOF
