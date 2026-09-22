@@ -9,7 +9,7 @@
 # Codex agent files are the exception and are always copied, since Codex rejects symlinked roles):
 #   ./install.sh
 #
-# Flags:  --yes        replace existing worker agents without asking
+# Flags:  --yes        replace existing installed files without asking
 #         --copy       force copy mode even when run from a clone
 #         --uninstall  remove everything this script installed
 set -euo pipefail
@@ -43,6 +43,13 @@ ask()  { # ask "question" -> 0 yes / 1 no. Reads the keyboard even when piped th
   [[ "$reply" =~ ^[Yy]$ ]]
 }
 same_target() { [[ -L "$1" && "$(readlink "$1")" == "$2" ]]; }
+points_to() { # 0 = $1 is a symlink that resolves to the same directory as $2 (the `skills` CLI
+  [[ -L "$1" ]] || return 1   # writes relative links, so a literal comparison is not enough)
+  local a b
+  a="$(cd -P "$1" 2>/dev/null && pwd -P)" || return 1
+  b="$(cd -P "$2" 2>/dev/null && pwd -P)" || return 1
+  [[ -n "$a" && "$a" == "$b" ]]
+}
 # Codex (0.155) opens role files under ~/.codex/agents/ with O_NOFOLLOW at spawn time and rejects
 # a symlink there ("agent type is currently not available"), so its agent files are always copied,
 # even in link mode.
@@ -84,33 +91,66 @@ for rt in "${RUNTIMES[@]}"; do IFS='|' read -r name detect _ _ _ <<<"$rt"; if [[
 say "Runtimes found: $(for rt in "${FOUND[@]}"; do IFS='|' read -r n _ <<<"$rt"; printf '%s; ' "$n"; done)"
 [[ ${#MISSING[@]} -gt 0 ]] && say "Not installed (skipped): ${MISSING[*]}"
 
-# ------------------------------------------------------------------ existing workers -> ask once
+# ------------------------------------------------------------------ existing installed files -> ask once
 EXISTING=()
 for rt in "${FOUND[@]}"; do
   IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
   for f in "$SRC/agents/$src"/*; do
     dest="$agents_dir/$(basename "$f")"
     [[ -e "$dest" || -L "$dest" ]] || continue
-    # A symlinked copy-only (Codex) destination is always converted below regardless of the
-    # answer, so it must not count toward the "differs, replace?" prompt.
-    copy_only "$src" && [[ -L "$dest" ]] && continue
+    # A symlinked copy-only (Codex) destination has to be converted to a real file, which is
+    # destructive, so it counts as "differs" and goes through the same confirmation.
     if [[ "$MODE" == "link" ]] && ! copy_only "$src"; then same_target "$dest" "$f" && continue
     else [[ ! -L "$dest" ]] && cmp -s "$f" "$dest" && continue; fi
     EXISTING+=("$dest")
   done
 done
+# The canonical skill directory and the per-runtime pointers to it are replaced in place, so
+# anything already there that is not what we would place joins the same one confirmation.
+skill_differs() { # 0 = installed and differs from what we would place; 1 = absent or identical
+  [[ -e "$CANON" || -L "$CANON" ]] || return 1
+  if [[ "$MODE" == "link" ]]; then
+    same_target "$CANON" "$SRC/skills/orchestrate" && return 1
+  else
+    [[ ! -L "$CANON" ]] && diff -qr "$SRC/skills/orchestrate" "$CANON" >/dev/null 2>&1 && return 1
+  fi
+  return 0
+}
+CANON_DIFFERS=0; SKILL_DIFFERS=0
+if skill_differs; then CANON_DIFFERS=1; SKILL_DIFFERS=1; EXISTING+=("$CANON"); fi
+for rt in "${FOUND[@]}"; do
+  IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
+  [[ -n "$skills_dir" ]] || continue          # OpenCode reads ~/.agents/skills itself; no pointer
+  link="$skills_dir/orchestrate"
+  [[ -e "$link" || -L "$link" ]] || continue  # absent: placed silently below
+  if same_target "$link" "$CANON" || points_to "$link" "$CANON"; then continue; fi
+  SKILL_DIFFERS=1; EXISTING+=("$link")
+done
+
 REPLACE=1
 if [[ ${#EXISTING[@]} -gt 0 ]]; then
-  say "Worker agents already exist and differ from this version (${#EXISTING[@]} files), e.g. ${EXISTING[0]}"
-  if ask "Replace them with the new version (update)?"; then REPLACE=1; else REPLACE=0; say "Keeping existing worker agents."; fi
+  subject="Worker agents"; subject_lc="worker agents"
+  if [[ $SKILL_DIFFERS -eq 1 ]]; then subject="Installed files"; subject_lc="installed files"; fi
+  say "$subject already exist and differ from this version (${#EXISTING[@]} files), e.g. ${EXISTING[0]}"
+  if ask "Replace them with the new version (update)?"; then REPLACE=1; else REPLACE=0; say "Keeping existing $subject_lc."; fi
 fi
+# Declined skill paths: the `skills` CLI relinks every runtime's skills dir itself, so it must not
+# run when the user kept one of those.
+SKILL_KEEP=0
+if [[ $SKILL_DIFFERS -eq 1 && $REPLACE -eq 0 ]]; then SKILL_KEEP=1; fi
 
 place() { # place <src> <dest> [copyonly]   (link or copy depending on MODE; respects REPLACE)
   local s="$1" d="$2" copyonly="${3:-0}"
   if [[ -e "$d" || -L "$d" ]]; then
     if [[ "$copyonly" -eq 1 && -L "$d" ]]; then
-      # A symlinked Codex role can never work; replace it regardless of REPLACE.
-      rm -f "$d"; mkdir -p "$(dirname "$d")"; cp -R "$s" "$d"; say "  replaced symlink $d"; return 0
+      # A symlinked Codex role can never work, but converting it destroys the link, so it
+      # needs the same consent as any other replacement.
+      if [[ $REPLACE -eq 1 ]]; then
+        rm -f "$d"; mkdir -p "$(dirname "$d")"; cp -R "$s" "$d"; say "  replaced symlink $d"
+      else
+        say "  WARNING: kept symlink $d - Codex cannot load a symlinked role file; re-run with --yes to convert it to a real file."
+      fi
+      return 0
     fi
     if [[ "$MODE" == "link" && "$copyonly" -ne 1 ]]; then same_target "$d" "$s" && return 0
     else [[ ! -L "$d" ]] && cmp -s "$s" "$d" && return 0; fi
@@ -125,18 +165,24 @@ place() { # place <src> <dest> [copyonly]   (link or copy depending on MODE; res
 # ------------------------------------------------------------------ skill
 say "Skill:"
 SKILL_VIA_CLI=0
-if [[ "$MODE" == "copy" ]] && command -v npx >/dev/null 2>&1; then
-  say "  skills CLI available (npx). Installing the skill through it so 'npx skills update' can refresh it."
-  yflag=""; [[ $YES -eq 1 ]] && yflag="-y"
-  if [[ $HAVE_TTY -eq 1 ]]; then npx -y skills add "$REPO_SLUG" --global --skill orchestrate $yflag < /dev/tty && SKILL_VIA_CLI=1 || true
-  else npx -y skills add "$REPO_SLUG" --global --skill orchestrate -y < /dev/null && SKILL_VIA_CLI=1 || true; fi
-  [[ $SKILL_VIA_CLI -eq 1 && -d "$CANON" ]] || { SKILL_VIA_CLI=0; say "  skills CLI install did not produce $CANON; falling back to a direct copy."; }
-fi
-if [[ $SKILL_VIA_CLI -eq 0 ]]; then
-  if [[ "$MODE" == "link" ]]; then
-    same_target "$CANON" "$SRC/skills/orchestrate" || { rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; ln -s "$SRC/skills/orchestrate" "$CANON"; say "  linked $CANON"; }
-  else
-    rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; cp -R "$SRC/skills/orchestrate" "$CANON"; say "  copied to $CANON"
+if [[ $CANON_DIFFERS -eq 1 && $REPLACE -eq 0 ]]; then
+  say "  kept existing $CANON (not replaced)."
+else
+  if [[ "$MODE" == "copy" && $SKILL_KEEP -eq 1 ]] && command -v npx >/dev/null 2>&1; then
+    say "  skipping the skills CLI: it would relink the skill dirs you chose to keep. Copying $CANON directly. Re-run with --yes to let the skills CLI manage it."
+  elif [[ "$MODE" == "copy" ]] && command -v npx >/dev/null 2>&1; then
+    say "  skills CLI available (npx). Installing the skill through it so 'npx skills update' can refresh it."
+    yflag=""; [[ $YES -eq 1 ]] && yflag="-y"
+    if [[ $HAVE_TTY -eq 1 ]]; then npx -y skills add "$REPO_SLUG" --global --skill orchestrate $yflag < /dev/tty && SKILL_VIA_CLI=1 || true
+    else npx -y skills add "$REPO_SLUG" --global --skill orchestrate -y < /dev/null && SKILL_VIA_CLI=1 || true; fi
+    [[ $SKILL_VIA_CLI -eq 1 && -d "$CANON" ]] || { SKILL_VIA_CLI=0; say "  skills CLI install did not produce $CANON; falling back to a direct copy."; }
+  fi
+  if [[ $SKILL_VIA_CLI -eq 0 ]]; then
+    if [[ "$MODE" == "link" ]]; then
+      same_target "$CANON" "$SRC/skills/orchestrate" || { rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; ln -s "$SRC/skills/orchestrate" "$CANON"; say "  linked $CANON"; }
+    else
+      rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; cp -R "$SRC/skills/orchestrate" "$CANON"; say "  copied to $CANON"
+    fi
   fi
 fi
 
@@ -147,7 +193,10 @@ for rt in "${FOUND[@]}"; do
   co=0; copy_only "$src" && co=1
   for f in "$SRC/agents/$src"/*; do place "$f" "$agents_dir/$(basename "$f")" "$co"; done
   if [[ -n "$skills_dir" ]]; then
-    same_target "$skills_dir/orchestrate" "$CANON" || { rm -rf "$skills_dir/orchestrate"; mkdir -p "$skills_dir"; ln -s "$CANON" "$skills_dir/orchestrate"; say "  linked $skills_dir/orchestrate -> $CANON"; }
+    link="$skills_dir/orchestrate"
+    if same_target "$link" "$CANON" || points_to "$link" "$CANON"; then :
+    elif [[ ( -e "$link" || -L "$link" ) && $REPLACE -eq 0 ]]; then say "  kept existing $link (not replaced)."
+    else rm -rf "$link"; mkdir -p "$skills_dir"; ln -s "$CANON" "$link"; say "  linked $link -> $CANON"; fi
   fi
   if [[ "$src" == "codex" ]]; then
     cfg="$HOME/.codex/config.toml"

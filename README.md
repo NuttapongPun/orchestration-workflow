@@ -40,7 +40,7 @@ One command installs or updates everything. It detects which of the four runtime
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
 ```
 
-If worker agents already exist and differ, it asks once before replacing them. Add `--yes` for unattended runs:
+If any installed file already exists and differs (worker agents or the skill), it asks once before replacing them. Add `--yes` for unattended runs:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --yes
@@ -55,7 +55,7 @@ Then start a **fresh** session:
 
 **Plan gate.** The orchestrator stops for your approval before the first wave that writes anything when a task is destructive or externally visible, when the plan is complex (two or more hard-tier implementation tasks, not counting review, or one whose wrong result is expensive to detect or undo), or when you asked for a plan, for example with "plan first". Otherwise it proceeds without asking. Read-only investigation still runs before the gate.
 
-**Update** (re-runs the installer; asks before replacing workers you changed):
+**Update** (re-runs the installer; asks before replacing workers or the skill you changed):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
