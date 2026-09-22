@@ -33,7 +33,7 @@ Preserve these when adapting. Each one closes a failure the workflow was built t
 
 ### Adapt for a human (different models, providers, prompts, or agents)
 
-1. Have them fork or clone. In a clone, `./install.sh` links runtime files to the clone, so edits are live after a fresh session.
+1. Have them fork or clone. In a clone, `./install.sh` links runtime files to the clone, so edits are live after a fresh session — except Codex agent files, which are copied, so rerun `./install.sh` after `python3 build.py` to refresh them.
 2. Change `build.py` only: `MODELS`, `EFFORT` (Claude Code), `EFFORT_OPENAI` and `OPENCODE_PM_EFFORT` (Codex and OpenCode), `OPENCODE_STACK` / `OPENCODE_STACKS`, `BODIES`, `DESC`. Keep worker names unless you also update `SKILL.md`, every file under `skills/orchestrate/references/`, and the OpenCode primary agent's `task` allowlist.
 3. Run `python3 build.py`, then `./install.sh`.
 4. Verify with the checks below. Done when the generated files parse and every runtime lists the workers with the new models.
@@ -55,6 +55,7 @@ Each check is a headless run that asks the runtime to list its subagents. A miss
 ## Facts you cannot find by reading the files
 
 - Antigravity CLI loads global skills only from `~/.gemini/config/skills/`. It ignores `~/.agents/skills/` and the two folders the `skills` CLI writes for it. This was confirmed by a probe, not documentation.
+- Codex 0.155 opens role files under `~/.codex/agents/` with O_NOFOLLOW at spawn time. A symlinked file is listed as available but every spawn fails with "agent type is currently not available". `install.sh` therefore copies the Codex files even in link mode. This was confirmed by a probe.
 - Antigravity ignores `--agent` when resuming a conversation. Orchestration there needs a fresh session on the Pro model.
 - Claude Code does not read `~/.agents/skills/` directly. The symlink in `~/.claude/skills/` is what makes the skill visible.
 - Codex custom agents need 0.153 or newer. `max_depth`, `max_concurrent_threads_per_session`, `default_subagent_model`, and `default_subagent_reasoning_effort` are the `[agents]` keys the binary accepts.

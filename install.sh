@@ -5,7 +5,8 @@
 # One-line install / update (copy mode):
 #   curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
 #
-# From a clone (link mode: runtime files become symlinks into the clone, `git pull` updates them):
+# From a clone (link mode: runtime files become symlinks into the clone, `git pull` updates them;
+# Codex agent files are the exception and are always copied, since Codex rejects symlinked roles):
 #   ./install.sh
 #
 # Flags:  --yes        replace existing worker agents without asking
@@ -42,6 +43,10 @@ ask()  { # ask "question" -> 0 yes / 1 no. Reads the keyboard even when piped th
   [[ "$reply" =~ ^[Yy]$ ]]
 }
 same_target() { [[ -L "$1" && "$(readlink "$1")" == "$2" ]]; }
+# Codex (0.155) opens role files under ~/.codex/agents/ with O_NOFOLLOW at spawn time and rejects
+# a symlink there ("agent type is currently not available"), so its agent files are always copied,
+# even in link mode.
+copy_only() { [[ "$1" == "codex" ]]; }
 
 # ------------------------------------------------------------------ uninstall
 if [[ $UNINSTALL -eq 1 ]]; then
@@ -86,7 +91,10 @@ for rt in "${FOUND[@]}"; do
   for f in "$SRC/agents/$src"/*; do
     dest="$agents_dir/$(basename "$f")"
     [[ -e "$dest" || -L "$dest" ]] || continue
-    if [[ "$MODE" == "link" ]]; then same_target "$dest" "$f" && continue
+    # A symlinked copy-only (Codex) destination is always converted below regardless of the
+    # answer, so it must not count toward the "differs, replace?" prompt.
+    copy_only "$src" && [[ -L "$dest" ]] && continue
+    if [[ "$MODE" == "link" ]] && ! copy_only "$src"; then same_target "$dest" "$f" && continue
     else [[ ! -L "$dest" ]] && cmp -s "$f" "$dest" && continue; fi
     EXISTING+=("$dest")
   done
@@ -97,15 +105,20 @@ if [[ ${#EXISTING[@]} -gt 0 ]]; then
   if ask "Replace them with the new version (update)?"; then REPLACE=1; else REPLACE=0; say "Keeping existing worker agents."; fi
 fi
 
-place() { # place <src> <dest>   (link or copy depending on MODE; respects REPLACE)
-  local s="$1" d="$2"
+place() { # place <src> <dest> [copyonly]   (link or copy depending on MODE; respects REPLACE)
+  local s="$1" d="$2" copyonly="${3:-0}"
   if [[ -e "$d" || -L "$d" ]]; then
-    if [[ "$MODE" == "link" ]]; then same_target "$d" "$s" && return 0; else [[ ! -L "$d" ]] && cmp -s "$s" "$d" && return 0; fi
+    if [[ "$copyonly" -eq 1 && -L "$d" ]]; then
+      # A symlinked Codex role can never work; replace it regardless of REPLACE.
+      rm -f "$d"; mkdir -p "$(dirname "$d")"; cp -R "$s" "$d"; say "  replaced symlink $d"; return 0
+    fi
+    if [[ "$MODE" == "link" && "$copyonly" -ne 1 ]]; then same_target "$d" "$s" && return 0
+    else [[ ! -L "$d" ]] && cmp -s "$s" "$d" && return 0; fi
     [[ $REPLACE -eq 1 ]] || return 0
     rm -rf "$d"
   fi
   mkdir -p "$(dirname "$d")"
-  if [[ "$MODE" == "link" ]]; then ln -s "$s" "$d"; else cp -R "$s" "$d"; fi
+  if [[ "$MODE" == "link" && "$copyonly" -ne 1 ]]; then ln -s "$s" "$d"; else cp -R "$s" "$d"; fi
   say "  installed $d"
 }
 
@@ -131,7 +144,8 @@ fi
 for rt in "${FOUND[@]}"; do
   IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
   say "$name:"
-  for f in "$SRC/agents/$src"/*; do place "$f" "$agents_dir/$(basename "$f")"; done
+  co=0; copy_only "$src" && co=1
+  for f in "$SRC/agents/$src"/*; do place "$f" "$agents_dir/$(basename "$f")" "$co"; done
   if [[ -n "$skills_dir" ]]; then
     same_target "$skills_dir/orchestrate" "$CANON" || { rm -rf "$skills_dir/orchestrate"; mkdir -p "$skills_dir"; ln -s "$CANON" "$skills_dir/orchestrate"; say "  linked $skills_dir/orchestrate -> $CANON"; }
   fi

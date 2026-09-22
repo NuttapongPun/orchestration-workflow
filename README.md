@@ -17,7 +17,7 @@ agents/claude/           worker subagents for Claude Code      -> ~/.claude/agen
 agents/codex/            worker subagents for Codex            -> ~/.codex/agents/*.toml
 agents/antigravity/      worker subagents for Antigravity CLI  -> ~/.gemini/config/agents/*.md
 agents/opencode/         worker subagents + primary orchestrate agent for OpenCode -> ~/.config/opencode/agents/*.md
-install.sh               symlinks all of the above into the runtimes present on the machine
+install.sh               symlinks all of the above into the runtimes present on the machine (Codex worker files are copied, since Codex rejects symlinked agent files)
 ```
 
 The same five workers exist in every runtime, with identical prompts. Only the model names differ:
@@ -114,7 +114,7 @@ This repo encodes one way of working. Fork it, or clone it, and change whatever 
 
 ### Set up the clone
 
-Run the installer from the clone. In that mode the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately without re-installing:
+Run the installer from the clone. In that mode the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately without re-installing (Codex worker files are copied instead, because Codex rejects symlinked agent files; rerun `./install.sh` after rebuilding):
 
 ```bash
 git clone https://github.com/NuttapongPun/orchestration-workflow.git
