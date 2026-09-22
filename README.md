@@ -76,7 +76,7 @@ The orchestrator role is played by whatever model your session runs, so pick the
 | Claude Code | Fable 5.1, or Opus 5 | `/model` |
 | Codex | GPT-6 Astra if your plan has it, else GPT-5.6 Sol | `/model` |
 | Antigravity CLI | Gemini 3.1 Pro (High) | session model setting; `--agent` is ignored when resuming, so start fresh |
-| OpenCode | GPT-5.6 Sol | pinned in the `orchestrate` primary agent (`OPENCODE_PM_MODEL` in `build.py`) |
+| OpenCode | GPT-6 Astra (low) | pinned in the `orchestrate` primary agent (`OPENCODE_PM_MODEL` in `build.py`) |
 
 A Flash, Haiku, or mini-class model as orchestrator defeats the purpose: it will route badly and accept weak review verdicts.
 
@@ -86,7 +86,7 @@ OpenCode fixes each agent's model in its file, so the whole stack (orchestrator,
 
 | `OPENCODE_STACK` | Provider | Orchestrator | Hard worker | Easy worker |
 |---|---|---|---|---|
-| `openai` (default) | OpenAI | `openai/gpt-5.6-sol` | `openai/gpt-5.6-terra` | `openai/gpt-5.6-luna` |
+| `openai` (default) | OpenAI | `openai/gpt-6-astra` | `openai/gpt-5.6-terra` | `openai/gpt-5.6-luna` |
 | `openai-openrouter` | OpenRouter | `openrouter/openai/gpt-5.6-sol` | `openrouter/openai/gpt-5.6-terra` | `openrouter/openai/gpt-5.6-luna` |
 | `claude` | Anthropic | `anthropic/claude-fable-5-1` | `anthropic/claude-opus-5` | `anthropic/claude-sonnet-5` |
 | `claude-openrouter` | OpenRouter | `openrouter/anthropic/claude-fable-5.1` | `openrouter/anthropic/claude-opus-5` | `openrouter/anthropic/claude-sonnet-5` |
@@ -138,7 +138,7 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
 - **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run; only `investigate` is sandbox read-only.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
 - **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In the other three it is a prompt rule.
-- **OpenCode needs the OpenAI provider connected.** The OpenCode agents reference `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. Link the provider once, either with a ChatGPT login or an API key:
+- **OpenCode needs the OpenAI provider connected.** The OpenCode agents reference `openai/gpt-6-astra`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. Link the provider once, either with a ChatGPT login or an API key:
 
   ```bash
   opencode auth login      # choose OpenAI, then ChatGPT login or API key

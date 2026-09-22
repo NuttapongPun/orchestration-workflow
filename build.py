@@ -21,7 +21,7 @@ EFFORT = {"investigate": "medium", "easy-worker": "medium", "hard-worker": "high
 # Codex and OpenCode: tuned for ChatGPT subscription limits, where reasoning tokens count against the 5-hour window.
 # review-hard stays high so it still catches what a medium-effort hard-worker misses.
 EFFORT_OPENAI = {**EFFORT, "investigate": "low", "hard-worker": "medium"}
-OPENCODE_PM_EFFORT = "medium"
+OPENCODE_PM_EFFORT = "low"
 
 MODELS = {
     "claude":      {"easy": "sonnet",        "hard": "opus"},
@@ -32,7 +32,7 @@ MODELS = {
 # OpenCode: pick one stack. Model IDs are OpenCode's provider/model form (see `opencode models`).
 # Prices and alternatives are described in README.md, "OpenCode model stacks".
 OPENCODE_STACKS = {
-    "openai":            {"pm": "openai/gpt-5.6-sol",                    "hard": "openai/gpt-5.6-terra",             "easy": "openai/gpt-5.6-luna"},
+    "openai":            {"pm": "openai/gpt-6-astra",                     "hard": "openai/gpt-5.6-terra",             "easy": "openai/gpt-5.6-luna"},
     "openai-openrouter": {"pm": "openrouter/openai/gpt-5.6-sol",         "hard": "openrouter/openai/gpt-5.6-terra",  "easy": "openrouter/openai/gpt-5.6-luna"},
     "claude":            {"pm": "anthropic/claude-fable-5-1",            "hard": "anthropic/claude-opus-5",          "easy": "anthropic/claude-sonnet-5"},
     "claude-openrouter": {"pm": "openrouter/anthropic/claude-fable-5.1", "hard": "openrouter/anthropic/claude-opus-5", "easy": "openrouter/anthropic/claude-sonnet-5"},

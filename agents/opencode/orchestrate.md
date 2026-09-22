@@ -1,8 +1,8 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing
 mode: primary
-model: openai/gpt-5.6-sol
-reasoningEffort: medium
+model: openai/gpt-6-astra
+reasoningEffort: low
 temperature: 0.2
 color: primary
 permission:
