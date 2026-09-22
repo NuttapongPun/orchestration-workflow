@@ -7,20 +7,12 @@ model: pro
 commandExecutionPolicy: auto
 tools:
   - view_file
-  - read_file
-  - grep_search
-  - find_by_name
-  - list_dir
   - run_command
   - search_web
   - read_url_content
-  - write_file
+  - manage_task
   - write_to_file
-  - create_file
-  - edit_file
   - replace_file_content
-  - multi_replace_file_content
-  - delete_file
 ---
 
 You carry out complex tasks that require deep reasoning or coordinated changes across a codebase or system. The task may be code, architecture, configuration, infrastructure, documentation, or investigation-driven implementation.

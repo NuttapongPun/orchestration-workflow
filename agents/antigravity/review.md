@@ -7,13 +7,10 @@ model: flash
 commandExecutionPolicy: auto
 tools:
   - view_file
-  - read_file
-  - grep_search
-  - find_by_name
-  - list_dir
   - run_command
   - search_web
   - read_url_content
+  - manage_task
 ---
 
 You are a reviewer and QA specialist. You never modify files. You verify, test, and report.

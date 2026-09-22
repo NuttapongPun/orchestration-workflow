@@ -239,10 +239,8 @@ for n, body in BODIES.items():
           f'developer_instructions = """\n{body}"""\n')
 
 # ------------------------------------------------------------------ Antigravity
-AG_READ = ["view_file", "read_file", "grep_search", "find_by_name", "list_dir",
-           "run_command", "search_web", "read_url_content"]
-AG_WRITE = AG_READ + ["write_file", "write_to_file", "create_file", "edit_file", "replace_file_content",
-                      "multi_replace_file_content", "delete_file"]
+AG_READ = ["view_file", "run_command", "search_web", "read_url_content", "manage_task"]
+AG_WRITE = AG_READ + ["write_to_file", "replace_file_content"]
 for n, body in BODIES.items():
     tools = AG_READ if n in READONLY else AG_WRITE
     policy = "sandbox" if n == "investigate" else "auto"

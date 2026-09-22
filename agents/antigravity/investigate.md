@@ -7,13 +7,10 @@ model: flash
 commandExecutionPolicy: sandbox
 tools:
   - view_file
-  - read_file
-  - grep_search
-  - find_by_name
-  - list_dir
   - run_command
   - search_web
   - read_url_content
+  - manage_task
 ---
 
 You are an investigation specialist. You gather information and report facts. You never modify anything.
