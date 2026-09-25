@@ -2,26 +2,25 @@
 description: Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live.
 mode: subagent
 model: opencode/nemotron-3.5-lightning-free
-temperature: 0.1
-color: info
-permission:
-  edit: deny
-  webfetch: allow
-  websearch: allow
-  bash:
-    "*": deny
-    "ls *": allow
-    "find *": allow
-    "cat *": allow
-    "head *": allow
-    "tail *": allow
-    "wc *": allow
-    "git log*": allow
-    "git show*": allow
-    "git diff*": allow
-    "git blame*": allow
-    "git status*": allow
-  task: deny
+color: "#38bdf8"
+permissions:
+  - { action: edit, resource: "*", effect: deny }
+  - { action: webfetch, resource: "*", effect: allow }
+  - { action: websearch, resource: "*", effect: allow }
+  - { action: shell, resource: "*", effect: deny }
+  - { action: shell, resource: "ls *", effect: allow }
+  - { action: shell, resource: "find *", effect: allow }
+  - { action: shell, resource: "cat *", effect: allow }
+  - { action: shell, resource: "head *", effect: allow }
+  - { action: shell, resource: "tail *", effect: allow }
+  - { action: shell, resource: "wc *", effect: allow }
+  - { action: shell, resource: "git log *", effect: allow }
+  - { action: shell, resource: "git show *", effect: allow }
+  - { action: shell, resource: "git diff *", effect: allow }
+  - { action: shell, resource: "git blame *", effect: allow }
+  - { action: shell, resource: "git status *", effect: allow }
+  - { action: subagent, resource: "*", effect: deny }
+  - { action: question, resource: "*", effect: deny }
 ---
 
 You are an investigation specialist. You gather information and report facts. You never modify anything.

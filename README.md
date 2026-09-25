@@ -32,7 +32,7 @@ The same five workers exist in every runtime, with identical prompts. Only the m
 
 \* The OpenCode column shows the default `free` stack. OpenCode's models are chosen per install with `--opencode-stack=<name>`; see [OpenCode model stacks](#opencode-model-stacks).
 
-Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `[agents] max_depth = 1`, Antigravity workers' tool lists exclude `invoke_subagent`, OpenCode workers have `task: deny`.
+Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `[agents] max_depth = 1`, Antigravity workers' tool lists exclude `invoke_subagent`, OpenCode workers deny the `subagent` permission.
 
 ## Install
 
@@ -126,7 +126,7 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
 | `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6-sol` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
 
-**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. `None` means the generated agent file gets no `reasoningEffort:` line at all, which is what you want for a model that has no effort parameter. Every stack except `free` uses `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified whether OpenCode Zen honours the field for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
+**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. OpenCode 2 takes effort as the model's variant, so a level is written as `model: <provider/model>#<level>`, and `None` writes the bare model with no variant, which is what you want for a model that has no effort variants. Every stack except `free` uses `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified which effort variants OpenCode Zen offers for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
 
 Rough cost per million tokens (input / output), OpenRouter list prices in September 2026:
 
@@ -178,7 +178,9 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
 - **Antigravity CLI** reads global skills only from `~/.gemini/config/skills/`, not from `~/.agents/skills/` and not from the folders the `skills` CLI targets. `install.sh` creates the right link. `agy agent` lists only primary agents, so the workers do not appear there even though `invoke_subagent` can call them. Start the orchestrator session on the Pro model; `--agent` is ignored when resuming a conversation.
 - **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run; only `investigate` is sandbox read-only.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
+- **OpenCode** 2.0 or newer is required: the agent files use its format (an ordered `permissions` rule list and `model: <provider/model>#<variant>`), which OpenCode 1 does not read. On macOS, `brew install anomalyco/tap/opencode-v2`; it conflicts with the v1 `opencode` formula, so uninstall that first.
 - **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In the other three it is a prompt rule.
+- **OpenCode's orchestrator dispatches every worker in the background** (`background: true` on the `subagent` tool), then ends its turn. You can keep talking to it while workers run; each result arrives as a message and the orchestrator picks the workflow up from there. New work that touches files a running worker writes waits for that worker.
 - **OpenCode's default `free` stack needs no provider login.** Its agents reference OpenCode Zen's free models (`opencode/muse-spark-1.3-contributor-free`, `opencode/mimo-v2.6-flash-free`, `opencode/nemotron-3.5-lightning-free`). A probe on a machine whose `opencode auth list` held only OpenRouter and OpenAI credentials, with nothing for OpenCode Zen, answered normally:
 
   ```bash

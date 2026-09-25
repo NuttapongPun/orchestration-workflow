@@ -1,14 +1,13 @@
 ---
 description: Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content.
 mode: subagent
-model: openrouter/deepseek/deepseek-v4-flash-0731
-reasoningEffort: medium
-temperature: 0.2
-color: success
-permission:
-  edit: allow
-  bash: allow
-  task: deny
+model: openrouter/deepseek/deepseek-v4-flash-0731#medium
+color: "#22c55e"
+permissions:
+  - { action: edit, resource: "*", effect: allow }
+  - { action: shell, resource: "*", effect: allow }
+  - { action: subagent, resource: "*", effect: deny }
+  - { action: question, resource: "*", effect: deny }
 ---
 
 You carry out simple, localized tasks with clear requirements and an existing pattern to follow. The task may be code, configuration, documentation, scripts, or content.

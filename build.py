@@ -35,9 +35,10 @@ MODELS = {
 #   ./install.sh --opencode-stack=<name>        (default: free)
 #
 # A stack is one entry per OpenCode agent: {"model": "<provider/model>", "effort": <level>},
-# where <level> is "low", "medium", "high", or None to leave `reasoningEffort:` out of the
-# generated file entirely (for a model that has no effort parameter). Model and effort are
-# independent per agent, so `investigate` can differ from the other easy-tier agents.
+# where <level> is "low", "medium", "high", or None. OpenCode 2 has no effort field; the level
+# is written as the model's variant, `model: <provider/model>#<level>`, and None writes the
+# bare model (for a model that has no effort variants). Model and effort are independent per
+# agent, so `investigate` can differ from the other easy-tier agents.
 # Model IDs are OpenCode's provider/model form (see `opencode models`).
 # Prices and alternatives are described in README.md, "OpenCode model stacks".
 # The six OpenCode agents: the primary orchestrator plus every worker in BODIES. Spelled out
@@ -72,7 +73,7 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
 
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
-    # it is unverified whether OpenCode Zen honours reasoningEffort for these, so it is omitted.
+    # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
     "free":              oc_stack("opencode/muse-spark-1.3-contributor-free", "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
     "openai":            oc_stack("openai/gpt-6-astra",                     "openai/gpt-6-sol",                 "openai/gpt-6-luna"),
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna"),
@@ -242,10 +243,18 @@ OPENCODE_ORCHESTRATE = """You are an orchestrator. You NEVER write code or edit 
    - the user asked for a plan, for example with "plan first"
 
    If none hold, proceed. If any hold, stop and report **blocked on you: approve the plan**. The report lists the tasks, the worker and rationale for each, the waves, the assumptions, and which condition triggered the gate. Resume only on the user's go, applying any amendments.
-2. **Delegate.** For each plan step, choose the worker by tier. Use `easy-worker` only when the change is localized, the requirements are clear, and the codebase already demonstrates the pattern. Otherwise, or when uncertain, use `hard-worker`. Dispatch every task in a wave as separate `task` calls in the same response, and do not wait for one result before issuing the next. A step that depends on another step's output, or writes a file another step reads, goes in a later wave.
-3. **Review.** After implementation, spawn `review` for easy-tier work or `review-hard` for hard-tier work with: the goal, the plan, the acceptance criteria, and which files were changed. Give it the raw artifacts, not the worker's conclusions.
+2. **Delegate.** For each plan step, choose the worker by tier. Use `easy-worker` only when the change is localized, the requirements are clear, and the codebase already demonstrates the pattern. Otherwise, or when uncertain, use `hard-worker`. Dispatch every task in a wave as separate background `subagent` calls in the same response (see "Background dispatch"). A step that depends on another step's output, or writes a file another step reads, goes in a later wave.
+3. **Review.** After implementation results arrive, spawn `review` for easy-tier work or `review-hard` for hard-tier work with: the goal, the plan, the acceptance criteria, and which files were changed. Give it the raw artifacts, not the worker's conclusions.
 4. **Judge.** Treat the verdict as a claim. Confirm the tests actually ran by reading the command output the reviewer returned. If review finds real problems, send a fix task back to the responsible worker with the reviewer's specific findings, then re-review. Stop after 3 rounds and report remaining issues honestly.
 5. **Report.** Summarize for the user: what was done, which files changed, review outcome, assumptions made, and anything left open. End with **ready for you** or **blocked on you**.
+
+## Background dispatch
+
+Every `subagent` call you make sets `background: true`, for `investigate` and review as well as implementation. Each worker pins its own model, so leave `model` unset.
+
+- After dispatching, tell the user in a line or two what is running, list each running task by its description, and end your response. Each result arrives later as its own message; pick the workflow up from there.
+- A wave's next step, whether the next wave, review, or the report, starts once every result from that wave has arrived. When one result arrives while others from its wave are still running, acknowledge it in a line and end your response.
+- The user can keep talking while tasks run. Answer questions and discuss the plan. Treat new work they ask for as new tasks: dispatch them now when they are independent of the running tasks, and hold them until the relevant result arrives when they write files a running task writes or need its output. Say which you did.
 
 ## Writing good task specs
 
@@ -305,11 +314,13 @@ for n, body in BODIES.items():
     write(f"agents/antigravity/{n}.md", "\n".join(fm) + "\n" + body)
 
 # ------------------------------------------------------------------ OpenCode
-OC_TEST_CMDS = ["git diff*", "git log*", "git show*", "git status*", "npm test*", "npm run *", "pnpm test*", "pnpm run *",
-                "yarn test*", "bun test*", "bun run *", "npx *", "pytest*", "python -m pytest*", "go test*",
-                "cargo test*", "cargo check*", "cargo clippy*", "make test*"]
-OC_READ_CMDS = ["ls *", "find *", "cat *", "head *", "tail *", "wc *", "git log*", "git show*", "git diff*", "git blame*", "git status*"]
-COLOR = {"investigate": "info", "easy-worker": "success", "hard-worker": "warning", "review": "warning", "review-hard": "warning"}
+# OpenCode 2 format: `permissions` is an ordered rule list where the last match wins, so each
+# broad rule comes before its exceptions. A shell pattern ending in " *" also matches the bare command.
+OC_TEST_CMDS = ["git diff *", "git log *", "git show *", "git status *", "npm test *", "npm run *", "pnpm test *", "pnpm run *",
+                "yarn test *", "bun test *", "bun run *", "npx *", "pytest *", "python -m pytest *", "go test *",
+                "cargo test *", "cargo check *", "cargo clippy *", "make test *"]
+OC_READ_CMDS = ["ls *", "find *", "cat *", "head *", "tail *", "wc *", "git log *", "git show *", "git diff *", "git blame *", "git status *"]
+COLOR = {"investigate": "#38bdf8", "easy-worker": "#22c55e", "hard-worker": "#f59e0b", "review": "#f59e0b", "review-hard": "#f59e0b"}
 # OC_AGENTS is written out above, before BODIES exists; renaming a worker must not leave the
 # stacks keyed by the old name, so check the two agree now that BODIES is defined.
 if OC_AGENTS != ["orchestrate", *BODIES]:
@@ -317,35 +328,39 @@ if OC_AGENTS != ["orchestrate", *BODIES]:
                      f"{['orchestrate', *BODIES]}; update OC_AGENTS and every stack in OPENCODE_STACKS")
 
 # Every stack is generated; install.sh installs the one named by --opencode-stack=<name>.
-def oc_effort_line(entry):
-    """`reasoningEffort:` for this agent, or nothing at all when the stack sets effort to None."""
-    return [] if entry["effort"] is None else [f"reasoningEffort: {entry['effort']}"]
+def oc_model(entry):
+    """`provider/model#effort`, or the bare model when the stack sets effort to None."""
+    return entry["model"] if entry["effort"] is None else f"{entry['model']}#{entry['effort']}"
 
+def oc_rule(action, resource, effect):
+    return f'  - {{ action: {action}, resource: "{resource}", effect: {effect} }}'
+
+def oc_agent(desc, mode, model, color, rules, body):
+    fm = ["---", f"description: {desc}", f"mode: {mode}", f"model: {model}", f'color: "{color}"', "permissions:"]
+    return "\n".join(fm + rules + ["---", ""]) + "\n" + body
+
+# Workers deny `subagent` (no nesting) and `question`: they run in the background, where no one
+# is waiting to answer.
 for stack, stack_spec in OPENCODE_STACKS.items():
     for n, body in BODIES.items():
         if n == "investigate":
-            perm = ["permission:", "  edit: deny", "  webfetch: allow", "  websearch: allow", "  bash:", '    "*": deny'] + \
-                   [f'    "{c}": allow' for c in OC_READ_CMDS] + ["  task: deny"]
-            temp = "0.1"
+            rules = [oc_rule("edit", "*", "deny"), oc_rule("webfetch", "*", "allow"), oc_rule("websearch", "*", "allow"),
+                     oc_rule("shell", "*", "deny")] + [oc_rule("shell", c, "allow") for c in OC_READ_CMDS]
         elif n in READONLY:
-            perm = ["permission:", "  edit: deny", "  task: deny", "  bash:", '    "*": ask'] + \
-                   [f'    "{c}": allow' for c in OC_TEST_CMDS]
-            temp = "0.1"
+            rules = [oc_rule("edit", "*", "deny"), oc_rule("shell", "*", "ask")] + \
+                    [oc_rule("shell", c, "allow") for c in OC_TEST_CMDS]
         else:
-            perm = ["permission:", "  edit: allow", "  bash: allow", "  task: deny"]
-            temp = "0.2"
-        fm = ["---", f"description: {DESC[n]}", "mode: subagent", f"model: {stack_spec[n]['model']}"] + \
-             oc_effort_line(stack_spec[n]) + [f"temperature: {temp}", f"color: {COLOR[n]}"] + perm + ["---", ""]
-        write(f"agents/opencode/{stack}/{n}.md", "\n".join(fm) + "\n" + body)
+            rules = [oc_rule("edit", "*", "allow"), oc_rule("shell", "*", "allow")]
+        rules += [oc_rule("subagent", "*", "deny"), oc_rule("question", "*", "deny")]
+        write(f"agents/opencode/{stack}/{n}.md",
+              oc_agent(DESC[n], "subagent", oc_model(stack_spec[n]), COLOR[n], rules, body))
 
-    write(f"agents/opencode/{stack}/orchestrate.md", "\n".join([
-        "---",
-        "description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing",
-        "mode: primary", f"model: {stack_spec['orchestrate']['model']}"] +
-        oc_effort_line(stack_spec["orchestrate"]) + ["temperature: 0.2", "color: primary",
-        "permission:", "  edit: deny", "  bash:", '    "*": ask', '    "git status*": allow', '    "git diff*": allow',
-        '    "git log*": allow', '    "ls *": allow', "  task:", '    "*": deny'] +
-        [f'    "{w}": allow' for w in BODIES] + ["---", ""]) + "\n" + OPENCODE_ORCHESTRATE)
+    rules = [oc_rule("edit", "*", "deny"), oc_rule("shell", "*", "ask")] + \
+            [oc_rule("shell", c, "allow") for c in ["git status *", "git diff *", "git log *", "ls *"]] + \
+            [oc_rule("subagent", "*", "deny")] + [oc_rule("subagent", w, "allow") for w in BODIES]
+    write(f"agents/opencode/{stack}/orchestrate.md",
+          oc_agent("Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing",
+                   "primary", oc_model(stack_spec["orchestrate"]), "#a78bfa", rules, OPENCODE_ORCHESTRATE))
 
 # ------------------------------------------------------------------ Skill
 SKILL = """---
@@ -507,7 +522,7 @@ write("skills/orchestrate/references/opencode.md", """# OpenCode binding
 
 This runtime does orchestration through its primary `orchestrate` agent, not through this skill. If this skill is loaded in a normal session, tell the commander to switch to the `orchestrate` primary agent and stop.
 
-Worker definitions live in `~/.config/opencode/agents/`: `investigate`, `easy-worker`, `hard-worker`, `review`, `review-hard`. Models and effort are fixed per file; the primary agent's `task` allowlist limits dispatch to these five.
+Worker definitions live in `~/.config/opencode/agents/`: `investigate`, `easy-worker`, `hard-worker`, `review`, `review-hard`. Models and effort are fixed per file; the primary agent's `subagent` allowlist limits dispatch to these five, and it dispatches them in the background.
 """)
 
 write("skills/orchestrate/agents/openai.yaml", """interface:

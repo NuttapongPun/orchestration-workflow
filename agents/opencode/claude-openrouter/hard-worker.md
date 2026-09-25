@@ -1,14 +1,13 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: openrouter/anthropic/claude-opus-5.5
-reasoningEffort: high
-temperature: 0.2
-color: warning
-permission:
-  edit: allow
-  bash: allow
-  task: deny
+model: openrouter/anthropic/claude-opus-5.5#high
+color: "#f59e0b"
+permissions:
+  - { action: edit, resource: "*", effect: allow }
+  - { action: shell, resource: "*", effect: allow }
+  - { action: subagent, resource: "*", effect: deny }
+  - { action: question, resource: "*", effect: deny }
 ---
 
 You carry out complex tasks that require deep reasoning or coordinated changes across a codebase or system. The task may be code, architecture, configuration, infrastructure, documentation, or investigation-driven implementation.

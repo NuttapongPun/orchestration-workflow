@@ -1,34 +1,32 @@
 ---
 description: Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, runs tests, returns a verdict.
 mode: subagent
-model: openrouter/z-ai/glm-5.3
-reasoningEffort: high
-temperature: 0.1
-color: warning
-permission:
-  edit: deny
-  task: deny
-  bash:
-    "*": ask
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git status*": allow
-    "npm test*": allow
-    "npm run *": allow
-    "pnpm test*": allow
-    "pnpm run *": allow
-    "yarn test*": allow
-    "bun test*": allow
-    "bun run *": allow
-    "npx *": allow
-    "pytest*": allow
-    "python -m pytest*": allow
-    "go test*": allow
-    "cargo test*": allow
-    "cargo check*": allow
-    "cargo clippy*": allow
-    "make test*": allow
+model: openrouter/z-ai/glm-5.3#high
+color: "#f59e0b"
+permissions:
+  - { action: edit, resource: "*", effect: deny }
+  - { action: shell, resource: "*", effect: ask }
+  - { action: shell, resource: "git diff *", effect: allow }
+  - { action: shell, resource: "git log *", effect: allow }
+  - { action: shell, resource: "git show *", effect: allow }
+  - { action: shell, resource: "git status *", effect: allow }
+  - { action: shell, resource: "npm test *", effect: allow }
+  - { action: shell, resource: "npm run *", effect: allow }
+  - { action: shell, resource: "pnpm test *", effect: allow }
+  - { action: shell, resource: "pnpm run *", effect: allow }
+  - { action: shell, resource: "yarn test *", effect: allow }
+  - { action: shell, resource: "bun test *", effect: allow }
+  - { action: shell, resource: "bun run *", effect: allow }
+  - { action: shell, resource: "npx *", effect: allow }
+  - { action: shell, resource: "pytest *", effect: allow }
+  - { action: shell, resource: "python -m pytest *", effect: allow }
+  - { action: shell, resource: "go test *", effect: allow }
+  - { action: shell, resource: "cargo test *", effect: allow }
+  - { action: shell, resource: "cargo check *", effect: allow }
+  - { action: shell, resource: "cargo clippy *", effect: allow }
+  - { action: shell, resource: "make test *", effect: allow }
+  - { action: subagent, resource: "*", effect: deny }
+  - { action: question, resource: "*", effect: deny }
 ---
 
 You are a reviewer and QA specialist. You never modify files. You verify, test, and report.
