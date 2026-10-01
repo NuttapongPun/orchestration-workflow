@@ -26,9 +26,9 @@ The same five workers exist in every runtime, with identical prompts. Only the m
 |---|---|---|---|---|---|
 | `investigate` | easy, read-only | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
 | `easy-worker` | easy | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
-| `hard-worker` | hard | opus | gpt-6-sol | pro | mimo-v2.6-flash-free |
+| `hard-worker` | hard | opus | gpt-6.1-sol | pro | mimo-v2.6-flash-free |
 | `review` | easy, read-only | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
-| `review-hard` | hard, read-only | opus | gpt-6-sol | pro | mimo-v2.6-flash-free |
+| `review-hard` | hard, read-only | opus | gpt-6.1-sol | pro | mimo-v2.6-flash-free |
 
 \* The OpenCode column shows the default `free` stack. OpenCode's models are chosen per install with `--opencode-stack=<name>`; see [OpenCode model stacks](#opencode-model-stacks).
 
@@ -84,7 +84,7 @@ The orchestrator role is played by whatever model your session runs, so pick the
 | Runtime | Suggested orchestrator | How to set |
 |---|---|---|
 | Claude Code | Fable 5.1, or Opus 5.5 | `/model` |
-| Codex | GPT-6 Astra if your plan has it, else GPT-6 Sol | `/model` |
+| Codex | GPT-6.1 Sol (high reasoning effort) | Select GPT-6.1 Sol in the active Codex session with `/model` |
 | Antigravity CLI | Gemini 3.1 Pro (High) | session model setting; `--agent` is ignored when resuming, so start fresh |
 | OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; the paid stacks run their orchestrator at low effort | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
 
@@ -119,21 +119,22 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
-| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6-astra` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/moonshotai/kimi-k3` |
+| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/moonshotai/kimi-k3` |
 | `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
 | `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
-| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6-sol` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
+| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
 | `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731` |
-| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6-sol` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
+| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/z-ai/glm-5.3` |
 
-**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. OpenCode 2 takes effort as the model's variant, so a level is written as `model: <provider/model>#<level>`, and `None` writes the bare model with no variant, which is what you want for a model that has no effort variants. Every stack except `free` uses `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified which effort variants OpenCode Zen offers for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
+**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. OpenCode 2 takes effort as the model's variant, so a level is written as `model: <provider/model>#<level>`, and `None` writes the bare model with no variant, which is what you want for a model that has no effort variants. The `openai` stack uses GPT-6.1 Sol at high effort for `orchestrate`, `hard-worker`, and `review-hard`; its easy agents run Luna at medium, except `investigate` at low. Other paid stacks use `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified which effort variants OpenCode Zen offers for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
+
 
 Rough cost per million tokens (input / output), OpenRouter list prices in September 2026:
 
 | Model | Input | Output |
 |---|---|---|
 | Muse Spark 1.3 (contributor)† / MiMo V2.6 Flash / Nemotron 3.5 Lightning, free on OpenCode Zen | $0 | $0 |
-| GPT-6 Sol / Luna | $2 / $0.10 | $10 / $0.50 |
+| GPT-6.1 Sol / GPT-6 Luna | $2 / $0.10 | $10 / $0.50 |
 | GPT-6 Astra | $10 | $50 |
 | Claude Opus 5.5 / Sonnet 5 | $4 / $2 | $20 / $10 |
 | Kimi K3 / GLM 5.3 / DeepSeek V4 Flash 0731 | $3 / $1.40 / $0.14 | $15 / $4.40 / $0.28 |
@@ -190,7 +191,7 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
   ```
 
   If your install does ask for a credential, run `opencode auth login` and pick OpenCode Zen. Free models are rate-limited and can be withdrawn; read the contributor-terms warning under "OpenCode model stacks" before pointing this stack at private code.
-- **If you pick the `openai` stack, connect the OpenAI provider first.** Those agents reference `openai/gpt-6-astra`, `openai/gpt-6-sol`, and `openai/gpt-6-luna`. Link the provider once, either with a ChatGPT login or an API key:
+- **If you pick the `openai` stack, connect the OpenAI provider first.** Its orchestrator and hard reviewers use `openai/gpt-6.1-sol#high`; easy workers use `openai/gpt-6-luna`. Link the provider once, either with a ChatGPT login or an API key:
 
   ```bash
   opencode auth login      # choose OpenAI, then ChatGPT login or API key

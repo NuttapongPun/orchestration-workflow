@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, runs tests, returns a verdict.
 mode: subagent
-model: openai/gpt-6-sol#high
+model: openai/gpt-6.1-sol#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: deny }

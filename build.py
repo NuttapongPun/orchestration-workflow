@@ -25,7 +25,7 @@ EFFORT_OPENAI = {**EFFORT, "investigate": "low"}
 
 MODELS = {
     "claude":      {"easy": "sonnet",      "hard": "opus"},
-    "codex":       {"easy": "gpt-6-luna",  "hard": "gpt-6-sol"},
+    "codex":       {"easy": "gpt-6-luna",  "hard": "gpt-6.1-sol"},
     "antigravity": {"easy": "flash",       "hard": "pro"},
 }
 
@@ -75,7 +75,7 @@ OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
     # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
     "free":              oc_stack("opencode/muse-spark-1.3-contributor-free", "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
-    "openai":            oc_stack("openai/gpt-6-astra",                     "openai/gpt-6-sol",                 "openai/gpt-6-luna"),
+    "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6-luna", effort={"orchestrate": "high"}),
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna"),
     "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5"),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5"),
@@ -502,7 +502,7 @@ write("skills/orchestrate/references/claude-code.md", """# Claude Code binding
 write("skills/orchestrate/references/codex.md", """# Codex binding
 
 - **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`, `review-hard`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
-- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`, hard tier is `gpt-6-sol`. If neither override is callable in the live runtime, report blocked on Sol/Luna availability. Never substitute another model.
+- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`, hard tier is `gpt-6.1-sol` at high reasoning effort. If either override is not callable in the live runtime, report blocked on model availability. Never substitute another model.
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`.
 - **Available agents:** read the runtime's subagent tool description before dispatching. It is the source of truth for names and callable models.

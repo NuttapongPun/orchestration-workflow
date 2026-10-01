@@ -1,7 +1,7 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: openai/gpt-6-sol#high
+model: openai/gpt-6.1-sol#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: allow }

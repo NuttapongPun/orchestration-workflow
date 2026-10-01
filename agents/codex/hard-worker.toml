@@ -1,6 +1,6 @@
 name = "hard-worker"
 description = "Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI."
-model = "gpt-6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
