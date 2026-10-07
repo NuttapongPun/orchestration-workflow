@@ -79,7 +79,7 @@ Before dispatching the first wave that writes anything, check the plan against t
 - the plan is complex: two or more hard-tier implementation tasks, not counting review, or one hard-tier implementation task whose wrong result is expensive to detect or undo
 - the commander asked for a plan, for example with "plan first"
 
-If none hold, proceed. If any hold, stop and report **blocked on you: approve the plan**. The report lists the tasks, the worker and rationale for each, the waves, the assumptions, and which condition triggered the gate. Resume only on the commander's go, applying any amendments. Approval covers this plan; gate again if discovery changes the scope so a condition newly holds. Read-only `investigate` waves may run before the gate.
+If none hold, proceed. If any hold, stop and report **blocked on you: approve the plan**. The report lists the tasks, the worker and rationale for each, the waves, the assumptions, and which condition triggered the gate. Resume only on the commander's explicit go: a reply that approves the plan, such as "go" or "approved". Answers to your questions, amendments, and discussion are not a go. Apply them, re-report the plan if it changed, and wait. Approval covers this plan; gate again if discovery changes the scope so a condition newly holds. Read-only `investigate` waves may run before the gate.
 
 ## 7. Write self-contained briefs
 
