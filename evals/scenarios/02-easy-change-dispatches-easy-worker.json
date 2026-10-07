@@ -1,0 +1,43 @@
+{
+  "description": "A localized, clearly specified change with an existing pattern to copy. It must go to easy-worker with the model set explicitly, then to review, with no plan gate.",
+  "skills": [
+    "orchestrate"
+  ],
+  "query": "Add a German greeter to greetings.py: a greet_de function that returns \"Hallo, {name}!\", registered in GREETERS under \"de\". Follow the existing pattern exactly.",
+  "files": [
+    "fixtures/pyapp"
+  ],
+  "expected_behavior": [
+    "Routes the change to easy-worker with a one-sentence rationale (localized, clear, existing pattern)",
+    "Sets the model explicitly on every dispatch: easy tier sonnet, hard tier opus (Claude Code)",
+    "Dispatches review after the easy-tier change, not review-hard",
+    "Does not stop at the plan gate: nothing is destructive, there is no hard-tier task, and no plan was asked for",
+    "Never edits greetings.py itself; the change in the fixture comes from the worker",
+    "Reports once, saying whether it is ready for you or blocked on you"
+  ],
+  "assert": {
+    "dispatches_in_order": [
+      "easy-worker",
+      "review"
+    ],
+    "not_dispatched": [
+      "hard-worker",
+      "review-hard"
+    ],
+    "final_text_not_regex": [
+      "blocked on you\\W+approve the (\\w+ )?plan"
+    ],
+    "fixture_file_regex": {
+      "greetings.py": [
+        "def greet_de\\(",
+        "Hallo, \\{name\\}!",
+        "\"de\"\\s*:\\s*greet_de"
+      ]
+    }
+  },
+  "limits": {
+    "max_turns": 30,
+    "budget_usd": 3.0,
+    "timeout_s": 900
+  }
+}

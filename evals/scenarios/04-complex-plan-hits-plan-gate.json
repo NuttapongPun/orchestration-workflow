@@ -1,0 +1,35 @@
+{
+  "description": "A plan with two hard-tier implementation tasks in disjoint files and nothing destructive or externally visible. Only the complexity condition can trigger the plan gate.",
+  "skills": [
+    "orchestrate"
+  ],
+  "query": "Two independent fixes. First, static.py's read_static() lets a crafted name such as '../server.py' read files outside the static/ directory; close that hole without breaking normal names. Second, the request counter in server.py loses increments under ThreadingHTTPServer's concurrent requests; make it correct.",
+  "files": [
+    "fixtures/pyapp"
+  ],
+  "expected_behavior": [
+    "Routes both fixes to hard-worker: one is security (path traversal in static.py), the other concurrency (server.py); the routing rules put both at hard tier",
+    "Keeps them as two tasks: they touch disjoint files (static.py, server.py) and can run in one wave",
+    "Stops and reports 'blocked on you: approve the plan', naming the complexity condition (two or more hard-tier implementation tasks); nothing in the request deletes or rewrites data, migrates, pushes, or touches state outside the repository",
+    "The report lists tasks, worker and rationale, waves, and assumptions",
+    "Dispatches no writing worker before approval; investigate is allowed"
+  ],
+  "assert": {
+    "only_dispatch": [
+      "investigate"
+    ],
+    "final_text_regex": [
+      "blocked on you\\W+approve the (\\w+ )?plan",
+      "hard-worker",
+      "wave",
+      "assum",
+      "complex|\\b(two|2|multiple|several)( or more)? hard[- ](tier|worker)"
+    ],
+    "fixture_unchanged": true
+  },
+  "limits": {
+    "max_turns": 20,
+    "budget_usd": 2.5,
+    "timeout_s": 600
+  }
+}

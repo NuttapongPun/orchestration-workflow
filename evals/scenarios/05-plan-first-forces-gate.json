@@ -1,0 +1,32 @@
+{
+  "description": "The same easy change as scenario 02, but the request says 'plan first'. That phrase alone must force the plan gate.",
+  "skills": [
+    "orchestrate"
+  ],
+  "query": "Plan first: add a German greeter to greetings.py, a greet_de function that returns \"Hallo, {name}!\", registered in GREETERS under \"de\", following the existing pattern.",
+  "files": [
+    "fixtures/pyapp"
+  ],
+  "expected_behavior": [
+    "Stops and reports 'blocked on you: approve the plan' even though the change is small and easy-tier",
+    "Names the triggering condition: the commander asked for a plan",
+    "Plans easy-worker for the change and review after it",
+    "Dispatches no writing worker before approval"
+  ],
+  "assert": {
+    "only_dispatch": [
+      "investigate"
+    ],
+    "final_text_regex": [
+      "blocked on you\\W+approve the (\\w+ )?plan",
+      "easy-worker",
+      "plan first|asked for a plan|requested a plan|asked to plan|plan was requested|you asked"
+    ],
+    "fixture_unchanged": true
+  },
+  "limits": {
+    "max_turns": 15,
+    "budget_usd": 1.5,
+    "timeout_s": 600
+  }
+}

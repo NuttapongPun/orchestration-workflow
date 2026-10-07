@@ -20,7 +20,7 @@ Preserve these when adapting. Each one closes a failure the workflow was built t
 - Reviewers run at the tier of the work they review, and the orchestrator judges the verdict itself, including whether the tests actually ran.
 - The skill is user-invoked only (`disable-model-invocation: true`). A model must never start orchestration on its own.
 - Read-only workers stay read-only at the runtime level where the runtime supports it, not only in the prompt.
-- The plan gate conditions are identical in the `SKILL` and `OPENCODE_ORCHESTRATE` literals in `build.py`, and `README.md` summarizes them. Change all three together, then rebuild.
+- The plan gate conditions are identical in the `SKILL` and `OPENCODE_ORCHESTRATE` literals in `build.py`, `README.md` summarizes them, and `evals/scenarios/` asserts their phrases. Change all four together, then rebuild and run `python3 evals/run.py --dry-run`.
 
 ## Branches
 
@@ -51,6 +51,7 @@ Each check is a headless run that asks the runtime to list its subagents. A miss
 - **Codex:** `python3 -c "import tomllib,glob;[tomllib.load(open(f,'rb')) for f in glob.glob('$HOME/.codex/agents/*.toml')]"` must parse, and `~/.codex/config.toml` must contain `max_depth = 1` under `[agents]`.
 - **OpenCode:** `opencode --version` must be 2.0 or newer. `opencode debug agents | python3 -c "import json,sys;[print(a['id'],a['mode']) for a in json.load(sys.stdin)]"` should list the five workers as `subagent` and `orchestrate` as `primary`. `grep '^model:' ~/.config/opencode/agents/*.md` should print the installed stack's model IDs (default `free`: `opencode/muse-spark-1.3-contributor-free` for `orchestrate`, `opencode/mimo-v2.6-flash-free` for `hard-worker` and `review-hard`, `opencode/nemotron-3.5-lightning-free` for `investigate`, `easy-worker`, and `review`). Anything else means a different `--opencode-stack` was installed, or the files are stale. `free` sets no effort, so its model lines carry no `#<variant>` suffix; every other stack's do.
 - **Skill:** `~/.agents/skills/orchestrate/SKILL.md` exists and `~/.claude/skills/orchestrate`, `~/.codex/skills/orchestrate`, `~/.gemini/config/skills/orchestrate` resolve to it.
+- **Behavior:** after changing the skill or its plan gate, run `python3 evals/run.py --dry-run`; a live run (`python3 evals/run.py --model <orchestrator model>`, Claude Code only) tests the *installed* skill and costs money, so reinstall first and run it only when the human asks; see `evals/README.md`.
 
 ## Facts you cannot find by reading the files
 

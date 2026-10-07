@@ -1,0 +1,27 @@
+{
+  "description": "A question the orchestrator can answer from the skill text alone. It must answer directly and dispatch no worker.",
+  "skills": [
+    "orchestrate"
+  ],
+  "query": "Quick question before we start: which of your workers reviews hard-tier work, and may it edit files? One sentence, please.",
+  "files": [
+    "fixtures/pyapp"
+  ],
+  "expected_behavior": [
+    "Answers in one short message that the hard-tier reviewer is review-hard and that it is read-only",
+    "Dispatches no worker: the question is trivia answerable from context (SKILL.md section 3, 'Do not delegate trivia')",
+    "Does not edit any file"
+  ],
+  "assert": {
+    "no_dispatch": true,
+    "final_text_regex": [
+      "review-hard"
+    ],
+    "fixture_unchanged": true
+  },
+  "limits": {
+    "max_turns": 8,
+    "budget_usd": 0.75,
+    "timeout_s": 300
+  }
+}
