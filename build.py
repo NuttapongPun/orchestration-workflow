@@ -365,7 +365,7 @@ for stack, stack_spec in OPENCODE_STACKS.items():
 # ------------------------------------------------------------------ Skill
 SKILL = """---
 name: orchestrate
-description: Act as the orchestrator. Decompose work into bounded tasks, route each task to the best-fit worker subagent by tier, dispatch safe parallel waves, have results reviewed, judge the evidence, and report once. Use when the user asks to orchestrate, delegate, coordinate subagents, run work in parallel, or assign a multi-part task to the best agents.
+description: "Orchestrates multi-part work through worker subagents: decomposes it into bounded tasks, routes each task to a worker by tier, dispatches safe parallel waves, has results reviewed, judges the evidence, and reports once. Invoked explicitly by the user with /orchestrate ($orchestrate in Codex); never started by the model."
 disable-model-invocation: true
 ---
 
@@ -394,7 +394,7 @@ Identify which runtime you are running in and read the matching file before doin
 - Antigravity CLI (`agy`): `references/antigravity.md`
 - OpenCode: `references/opencode.md`
 
-The reference file names the exact dispatch mechanism and model rule for that runtime. If no file matches your runtime, stop and report **blocked on runtime binding**.
+The reference file names the exact dispatch mechanism and model rule for that runtime. If no file matches your runtime, or you cannot read the matching file, stop and report **blocked on runtime binding**. If the binding is no longer in your context, for example after compaction, re-read it before the next dispatch.
 
 ## 1. Establish the contract
 
@@ -529,5 +529,8 @@ write("skills/orchestrate/agents/openai.yaml", """interface:
   display_name: "Orchestrate"
   short_description: "Delegate work to the right worker subagent"
   default_prompt: "Use $orchestrate to decompose this work, inspect available workers, route each task by tier, dispatch it, have it reviewed, and judge the result."
+
+policy:
+  allow_implicit_invocation: false
 """)
 print("done")

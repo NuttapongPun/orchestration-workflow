@@ -60,7 +60,7 @@ The names, and an install command for every stack, are listed under [OpenCode mo
 
 Then start a **fresh** session:
 
-- **Claude Code, Codex, Antigravity:** type `/orchestrate`. The skill is user-invoked only; the model never triggers it on its own.
+- **Claude Code, Antigravity:** type `/orchestrate`. **Codex:** type `$orchestrate`. The skill is user-invoked only; the model never triggers it on its own (Codex needs `policy.allow_implicit_invocation: false` for this, which `build.py` writes into the skill's `agents/openai.yaml`).
 - **OpenCode:** select the `orchestrate` primary agent. The skill is not used there. The default `free` stack uses OpenCode Zen's free models (`opencode/...`), which worked here with no provider credential of their own. Other stacks need their provider connected first (see Runtime notes).
 
 **Plan gate.** The orchestrator stops for your approval before the first wave that writes anything when a task is destructive or externally visible, when the plan is complex (two or more hard-tier implementation tasks, not counting review, or one whose wrong result is expensive to detect or undo), or when you asked for a plan, for example with "plan first". Otherwise it proceeds without asking. Read-only investigation still runs before the gate.

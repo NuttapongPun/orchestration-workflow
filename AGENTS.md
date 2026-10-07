@@ -58,6 +58,7 @@ Each check is a headless run that asks the runtime to list its subagents. A miss
 - Codex 0.155 opens role files under `~/.codex/agents/` with O_NOFOLLOW at spawn time. A symlinked file is listed as available but every spawn fails with "agent type is currently not available". `install.sh` therefore copies the Codex files even in link mode. This was confirmed by a probe.
 - Antigravity ignores `--agent` when resuming a conversation. Orchestration there needs a fresh session on the Pro model.
 - Claude Code does not read `~/.agents/skills/` directly. The symlink in `~/.claude/skills/` is what makes the skill visible.
+- Codex ignores `disable-model-invocation`. It lists the skill to the model, including in worker threads, unless `agents/openai.yaml` sets `policy.allow_implicit_invocation: false`, which `build.py` writes. This was confirmed from Codex session logs (0.153 to 0.159) and the binary (0.160.1).
 - Codex custom agents need 0.153 or newer. `max_depth`, `max_concurrent_threads_per_session`, `default_subagent_model`, and `default_subagent_reasoning_effort` are the `[agents]` keys the binary accepts.
 - OpenCode 1 is not supported. The generated agent files use OpenCode 2's format (`permissions` rule list, `subagent` action, `model: <provider/model>#<variant>`, hex `color`); v1 does not read it.
 - `opencode debug agents` asks OpenCode's shared background service, which can answer with the agent list from before files were added. If a freshly installed agent is missing, run it again before editing anything. This was confirmed by a probe.
