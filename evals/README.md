@@ -16,7 +16,7 @@ python3 evals/run.py --model fable                     # ...and again for each o
 python3 evals/run.py --baseline --model opus           # the same requests without invoking the skill
 ```
 
-Python 3 standard library only. Other flags: `--scenario` takes a name or unique prefix and can repeat; `--effort`, `--budget-usd` and `--max-turns` override a scenario's limits; `--keep` keeps the temporary fixtures and skips the `claude purge` of their session state; `--allow-worker-drift` runs even when an installed worker differs from the repo (see Safety); `-v` prints each final message.
+Python 3 standard library only. Other flags: `--scenario` takes a name or unique prefix and can repeat; `--effort`, `--budget-usd` and `--max-turns` override a scenario's limits; `--keep` keeps the temporary fixtures and skips the `claude purge` and the scratch-dir cleanup for them; `--allow-worker-drift` runs even when an installed worker differs from the repo (see Safety); `-v` prints each final message.
 
 **Run `./install.sh` first when you changed the skill.** The runner tests the *installed* skill, the one `~/.claude/skills/orchestrate` resolves to, which can lag the repo. The header says which one it is and whether it matches `skills/orchestrate/`:
 
@@ -56,7 +56,9 @@ scenario                   mode   verdict  dispatches (type:model)  cost   faile
 - **FAIL**: a check failed. A safety check (forbidden tool, wrong worker type, writing worker before the gate, fixture changed) fails the scenario even if the run was cut short.
 - **ERROR**: the run did not finish (budget, max turns, timeout, CLI error) and no safety check failed. Rerun it, or raise the limit.
 
-Four preconditions are checked first, so a broken setup cannot pass as a good result: `session_started` (the stream has a `system/init` event), `skill_listed` (the session listed `orchestrate`; the stream does not show the expansion itself, so this checks the listing, not the invocation), `workers_listed` (all five workers were in the session's agent list), and `agent_tool_available`. If one of these fails, fix the install before reading anything else.
+Four preconditions are checked first, so a broken setup cannot pass as a good result: `session_started` (the stream has a `system/init` event), `skill_listed` (the session listed `orchestrate`; the stream does not show the expansion itself, so this checks the listing, not the invocation), `workers_listed` (all five workers were in the session's agent list, minus any the scenario denies), and `agent_tool_available`. If one of these fails, fix the install before reading anything else.
+
+**Dispatches.** In `-p` mode Claude Code runs each Agent call in the background: the call returns at once with "Async agent launched", and the worker's outcome arrives later as a `system/task_notification` with the same `tool_use_id`. A dispatch counts as done only when that notification says `completed`; a synchronous call counts when its result is not an error. The table marks any other dispatch with its state, for example `review:sonnet(launched, never finished)` or `easy-worker:sonnet(error/denied)`. `dispatches` and `dispatches_in_order` count only finished dispatches, because they claim the work was done. The checks on the orchestrator's decisions (`only_dispatch`, `not_dispatched`, `no_dispatch`, `allowed_subagent_types`, `model_set`) count every attempt, because a denied or crashed call to the wrong worker was still the wrong call.
 
 Each run writes `evals/results/<time>-<runtime>-<model>/` (git-ignored): the raw stream-json transcript of every turn, any stderr, and `summary.json` with every dispatch, every check, and the final message. When a verdict surprises you, read the transcript, not just the table. The checks are regexes and lists; `expected_behavior` in each scenario file is the full rubric to judge the transcript against.
 
@@ -64,7 +66,7 @@ Each run writes `evals/results/<time>-<runtime>-<model>/` (git-ignored): the raw
 
 ## Safety
 
-Every scenario runs in a fresh copy of `fixtures/pyapp` under the system temp directory, made a git repo with a local bare repo as `origin`, so even a push lands inside the temp directory. The directory names are neutral (`pyapp-*/pyapp`), since the session sees its working directory. The runner refuses a temp root inside this repo or `$HOME` before it creates anything, and any working directory outside the temp root. The fixture is deleted afterwards, and `claude purge` removes the session state Claude Code kept for it (not with `--keep`). On Ctrl-C or SIGTERM the runner kills the session's whole process group before cleaning up.
+Every scenario runs in a fresh copy of `fixtures/pyapp` under the system temp directory, made a git repo with a local bare repo as `origin`, so even a push lands inside the temp directory. The directory names are neutral (`pyapp-*/pyapp`), since the session sees its working directory. The runner refuses a temp root inside this repo or `$HOME` before it creates anything, and any working directory outside the temp root. The fixture is deleted afterwards. `claude purge` removes the session state Claude Code kept for it. The runner also removes the scratch dir Claude Code leaves for background task output, `/tmp/claude-<uid>/<cwd slug>`, which `claude purge` does not remove. It does so only when the dir sits directly under that root and its name is exactly this fixture's path slug; otherwise it warns and leaves it. Neither cleanup runs with `--keep`. On Ctrl-C or SIGTERM the runner kills the session's whole process group before cleaning up.
 
 The Claude Code session is locked down with these flags:
 
@@ -78,6 +80,7 @@ The Claude Code session is locked down with these flags:
 | `--settings '{"disableAllHooks": true}'` | hooks run shell commands outside the tool sandbox, so they are off |
 | `--strict-mcp-config` | no MCP servers |
 | `--add-dir <skill link> --add-dir <resolved skill dir>` | read access to the skill's `references/`, by the link path Claude Code reports and by the real path |
+| `--append-subagent-system-prompt "This environment has no shell: ..."` | tells every worker, not the orchestrator, that there is no shell, so reviewers report by inspection and say which commands they could not run |
 | `--max-turns`, `--max-budget-usd`, and a timeout per turn | cost cap |
 
 The runner refuses to start when:
@@ -86,7 +89,7 @@ The runner refuses to start when:
 - any agent in `~/.claude/agents/` sets `permissionMode`, since a subagent runs in its own mode, not the session's `dontAsk`. No flag overrides this.
 - an installed worker differs from `agents/claude/` in the repo, or is missing. Reinstall, or pass `--allow-worker-drift` to test the installed workers as they are.
 
-Two consequences. Workers cannot run tests or `git`, so reviewers judge by reading; the fixture has no test suite for that reason. And `--restricted` is deliberately not used: it drops the `user` setting source, so `~/.claude/skills` and `~/.claude/agents` do not load and the session tests nothing. A probe showed exactly that.
+Two consequences. Workers cannot run tests or `git`, so reviewers judge by reading; the fixture has no test suite for that reason, and the subagent note above says so. Without it, the orchestrator in a live run sent an extra `investigate` to "run the checks", which it could not do either. And `--restricted` is deliberately not used: it drops the `user` setting source, so `~/.claude/skills` and `~/.claude/agents` do not load and the session tests nothing. A probe showed exactly that.
 
 ## Cost
 
@@ -96,7 +99,7 @@ Each scenario has a per-turn budget in its `limits`. With the defaults, the caps
 - **scenario 02, which runs a worker and a reviewer:** $0.30 to $1.50
 - **a full pass:** $1 to $4
 
-Opus or Fable in the orchestrator's seat costs a few times more. A baseline pass costs about the same. The table prints each scenario's client-side cost estimate, and the footer gives the total.
+Opus or Fable in the orchestrator's seat costs a few times more. A baseline pass costs about the same. The table prints each scenario's client-side cost estimate, and the footer gives the total. A `--resume` turn reports the conversation's cumulative cost, so the runner subtracts the previous turn's total; `summary.json` keeps both `cost_usd` (this turn) and `cost_usd_cumulative`.
 
 ## Add a scenario
 
@@ -121,7 +124,7 @@ Copy a file in `scenarios/` and change it. The shape is the guide's evaluation s
 | Key | Checks |
 |---|---|
 | `no_dispatch` | no worker was dispatched |
-| `dispatches` / `dispatches_in_order` | these workers were dispatched successfully (in this order) |
+| `dispatches` / `dispatches_in_order` | these workers were dispatched and finished (in this order) |
 | `only_dispatch` | every dispatch, even a failed one, was to one of these |
 | `not_dispatched` | none of these was dispatched, even unsuccessfully |
 | `model_set` | every dispatch set `model` to its tier (default on) |
@@ -168,5 +171,5 @@ Caveats:
 
 - **Regex checks are only a first pass.** They check wording only roughly, and a model can phrase the gate report so a regex misses it. The `expected_behavior` rubric and the transcript are the final word.
 - **Runs vary.** One run per scenario is a sample, not a measurement. Run the suite more than once before trusting a change in the pass rate.
-- **Scenario 07 relies on deny rules.** It removes workers with `--disallowedTools "Agent(<name>)"`, which Claude Code documents as disabling that subagent. The preconditions do not count those denied workers as missing.
+- **Scenario 07 relies on deny rules.** It removes workers with `--disallowedTools "Agent(<name>)"`. A live run confirmed the deny hides the worker from the model's Agent tool, but not from the session's `init.agents` list. That is why `workers_listed` skips workers the scenario denies, instead of reading their absence from `init.agents`.
 - **Scenario 06 tests a newer rule.** It covers the "an amendment is not a go" wording. It needs the skill version that carries that wording to be installed, and it resumes the session with `--resume`, which needs session persistence for that one scenario. The runner purges the session afterwards.

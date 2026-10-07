@@ -45,6 +45,10 @@ CLAUDE_TIER_MODEL = {"easy": "sonnet", "hard": "opus"}
 # Built-in tools the session gets. No tool that runs commands or code, and no web tool,
 # so no process in a run can execute a shell command. Workers keep Read/Grep/Glob/Edit/Write.
 CLAUDE_TOOLS = ["Agent", "Read", "Grep", "Glob", "Edit", "Write", "NotebookEdit"]
+# Appended to every subagent's system prompt, so workers do not promise command output they
+# cannot produce (seen live: reviewers and investigate tried to "run" git and python).
+SUBAGENT_NOTE = ("This environment has no shell: report verification by inspection and say which "
+                 "commands you could not run.")
 # Deny rules on top, in case a worker definition or a future default re-adds them.
 CLAUDE_DENY = ["Bash", "WebFetch", "WebSearch", "mcp__*"]
 
@@ -378,7 +382,9 @@ def claude_cmd(prompt, scn, args, work, skill_dirs, turn, session_id):
            # Hooks run shell commands outside the tool permission system; turn them all off.
            "--settings", json.dumps({"disableAllHooks": True}),
            "--max-turns", str(args.max_turns or lim["max_turns"]),
-           "--max-budget-usd", f"{budget:g}"]
+           "--max-budget-usd", f"{budget:g}",
+           # Subagents only (-p mode); the orchestrator's prompt is untouched.
+           "--append-subagent-system-prompt", SUBAGENT_NOTE]
     if args.baseline:
         cmd += ["--disable-slash-commands"]
     else:
@@ -472,9 +478,27 @@ def stop_group(proc, steps):
         raise interrupted
 
 
+def dispatch_state(tool_use_id, results, started, notified):
+    """How one Agent call ended: "completed", or why it did not count as done.
+
+    Claude Code runs Agent calls in the background in -p mode: the tool_result arrives at once
+    ("Async agent launched successfully") and the worker's outcome comes later as a
+    system/task_notification with the same tool_use_id. A synchronous call has no task events,
+    and its tool_result is the worker's own result.
+    """
+    if tool_use_id in notified:
+        status = notified[tool_use_id]
+        return "completed" if status == "completed" else f"ended:{status}"
+    if tool_use_id in started:
+        return "launched, never finished"
+    if tool_use_id not in results:
+        return "no result"
+    return "completed" if results[tool_use_id] else "error/denied"
+
+
 def parse_claude(events):
     out = {"init": None, "tools": [], "dispatches": [], "final_text": "", "result": None, "denials": []}
-    results = {}
+    results, started, notified = {}, set(), {}
     last_text = ""
     for ev in events:
         t = ev.get("type")
@@ -482,6 +506,11 @@ def parse_claude(events):
             out["init"] = ev
         elif t == "system" and ev.get("subtype") == "permission_denied":
             out["denials"].append(ev)
+        elif t == "system" and ev.get("subtype") == "task_started" and ev.get("tool_use_id"):
+            if ev.get("is_backgrounded", True):
+                started.add(ev["tool_use_id"])
+        elif t == "system" and ev.get("subtype") == "task_notification" and ev.get("tool_use_id"):
+            notified[ev["tool_use_id"]] = ev.get("status")
         elif t == "assistant":
             top = ev.get("parent_tool_use_id") is None
             for b in (ev.get("message") or {}).get("content") or []:
@@ -493,7 +522,7 @@ def parse_claude(events):
                     if b.get("name") in ("Agent", "Task"):
                         out["dispatches"].append({"id": b.get("id"),
                                                   "type": inp.get("subagent_type") or "general-purpose",
-                                                  "model": inp.get("model"), "ok": None})
+                                                  "model": inp.get("model"), "ok": None, "state": None})
                 elif b.get("type") == "text" and top and b.get("text", "").strip():
                     last_text = b["text"]
         elif t == "user":
@@ -504,7 +533,8 @@ def parse_claude(events):
         elif t == "result":
             out["result"] = ev
     for d in out["dispatches"]:
-        d["ok"] = results.get(d["id"])
+        d["state"] = dispatch_state(d["id"], results, started, notified)
+        d["ok"] = d["state"] == "completed"
     res = out["result"] or {}
     out["final_text"] = res.get("result") if isinstance(res.get("result"), str) else last_text
     return out
@@ -590,8 +620,12 @@ def evaluate(assertions, parsed, before, after, work):
     a = dict(DEFAULT_ASSERT)
     a.update(assertions)
     checks = []
+    # Every attempt counts for the checks on the orchestrator's decisions (worker type, model,
+    # only/not/no dispatch): a call that was denied, crashed or ran out of budget was still the
+    # orchestrator's choice. Only dispatches whose worker finished count as "dispatched" for
+    # `dispatches` and `dispatches_in_order`, which claim the work was actually done.
     attempted = [d["type"] for d in parsed["dispatches"]]
-    succeeded = [d["type"] for d in parsed["dispatches"] if d["ok"] is not False]
+    succeeded = [d["type"] for d in parsed["dispatches"] if d["ok"]]
 
     bad_tools = sorted({t["name"] for t in parsed["tools"] if t["name"] in a["forbidden_tools"]})
     checks.append(("forbidden_tools", not bad_tools, f"orchestrator called {bad_tools}" if bad_tools else ""))
@@ -638,10 +672,22 @@ def evaluate(assertions, parsed, before, after, work):
 
 # ------------------------------------------------------------------ runners
 
+def turn_cost(cumulative, previous_cumulative):
+    """This turn's spend. A --resume turn reports the conversation's cumulative total_cost_usd
+    (earlier turns included; confirmed live: turn 2's usage = turn 1's + its own), so subtract
+    the previous turn's total. A first turn's total is its own."""
+    if cumulative is None:
+        return None
+    if previous_cumulative is None:
+        return cumulative
+    return max(0.0, cumulative - previous_cumulative)
+
+
 def run_claude_scenario(scn, args, skill_dirs, outdir):
     base, work = make_fixture(scn)
     before = snapshot(base)
     session_id = str(uuid.uuid4())
+    previous_total = None
     label = scn["name"] + ("-baseline" if args.baseline else "")
     record = {"scenario": scn["name"], "mode": "baseline" if args.baseline else "skill", "turns": [], "fixture": str(base)}
     try:
@@ -663,13 +709,17 @@ def run_claude_scenario(scn, args, skill_dirs, outdir):
                       + evaluate(turn["assert"], parsed, before, after, work))
             record["turns"].append({
                 "turn": i + 1, "command": shlex.join(cmd), "returncode": rc, "timed_out": timed_out,
-                "subtype": res.get("subtype"), "cost_usd": res.get("total_cost_usd"), "num_turns": res.get("num_turns"),
+                "subtype": res.get("subtype"), "num_turns": res.get("num_turns"),
+                "cost_usd": turn_cost(res.get("total_cost_usd"), previous_total),
+                "cost_usd_cumulative": res.get("total_cost_usd"),
                 "model": (parsed["init"] or {}).get("model"),
                 "dispatches": parsed["dispatches"], "orchestrator_tools": [t["name"] for t in parsed["tools"]],
                 "permission_denials": res.get("permission_denials") or [d.get("tool_name") for d in parsed["denials"]],
                 "final_text": parsed["final_text"], "complete": complete,
                 "checks": [{"name": n, "ok": ok, "detail": d} for n, ok, d in checks],
                 "stderr_tail": stderr.strip()[-400:]})
+            if res.get("total_cost_usd") is not None:
+                previous_total = res.get("total_cost_usd")
             if not complete:
                 break   # a later turn depends on this one finishing
     finally:
@@ -677,6 +727,7 @@ def run_claude_scenario(scn, args, skill_dirs, outdir):
             record["kept"] = True
         else:
             purge_claude_state(work)
+            cleanup_claude_scratch(work)
             shutil.rmtree(assert_safe(base), ignore_errors=True)
     record["verdict"] = verdict(record, len(scn["turns"]))
     return record
@@ -695,6 +746,55 @@ def purge_claude_state(work):
     if r.returncode != 0:
         print(f"  warning: claude purge {work} exited {r.returncode}: {(r.stderr or r.stdout).strip()[:300]}",
               file=sys.stderr)
+
+
+def claude_scratch_roots():
+    """Where Claude Code keeps per-cwd scratch (background task output): <tmp>/claude-<uid>/<cwd slug>/.
+    Seen live under /tmp (/private/tmp on macOS), not under $TMPDIR; both are checked."""
+    roots = []
+    for base in (Path("/tmp"), Path(tempfile.gettempdir())):
+        r = base.resolve() / f"claude-{os.getuid()}"
+        if r not in roots:
+            roots.append(r)
+    return roots
+
+
+def cwd_slug(path):
+    """Claude Code's directory name for a cwd: every character outside [A-Za-z0-9] becomes '-'."""
+    return re.sub(r"[^A-Za-z0-9]", "-", str(path))
+
+
+def scratch_dir_problem(candidate, work):
+    """None when `candidate` is this fixture's Claude Code scratch dir and may be removed; else why not."""
+    try:
+        work = assert_safe(work)
+    except SystemExit as e:
+        return f"fixture path refused: {e}"
+    c = Path(candidate)
+    if c.is_symlink():
+        return "is a symlink"
+    parent = c.parent.resolve()
+    if parent not in claude_scratch_roots():
+        return f"parent {parent} is not a Claude Code scratch root {[str(r) for r in claude_scratch_roots()]}"
+    for forbidden in (REPO, HOME):
+        if parent == forbidden or forbidden in parent.parents:
+            return f"inside {forbidden}"
+    if c.name != cwd_slug(work):
+        return f"name does not encode this fixture's path (want {cwd_slug(work)})"
+    return None
+
+
+def cleanup_claude_scratch(work):
+    """Remove the scratch dir Claude Code leaves for the fixture's cwd; claude purge does not."""
+    for root in claude_scratch_roots():
+        c = root / cwd_slug(work)
+        if not (c.exists() or c.is_symlink()):
+            continue
+        problem = scratch_dir_problem(c, work)
+        if problem:
+            print(f"  warning: left {c} in place: {problem}", file=sys.stderr)
+            continue
+        shutil.rmtree(c, ignore_errors=True)
 
 
 def verdict(record, n_turns):
@@ -745,7 +845,8 @@ def print_table(records):
     for r in records:
         disp, cost, fails = [], 0.0, []
         for t in r["turns"]:
-            disp += [f"{d['type']}:{d['model'] or '-'}{'' if d['ok'] is not False else '(denied)'}" for d in t["dispatches"]]
+            disp += [f"{d['type']}:{d['model'] or '-'}{'' if d['ok'] else '(' + str(d.get('state') or 'not completed') + ')'}"
+                     for d in t["dispatches"]]
             cost += t["cost_usd"] or 0
             fails += [f"t{t['turn']} {c['name']}: {c['detail']}" for c in t["checks"] if not c["ok"]]
             if not t["complete"]:
@@ -770,7 +871,7 @@ def main():
     ap.add_argument("--budget-usd", type=float, help="override each scenario's per-turn --max-budget-usd")
     ap.add_argument("--max-turns", type=int, help="override each scenario's --max-turns")
     ap.add_argument("--keep", action="store_true",
-                    help="keep the temp fixtures for inspection (also skips `claude purge` of their session state)")
+                    help="keep the temp fixtures for inspection (also skips `claude purge` and the scratch-dir cleanup)")
     ap.add_argument("--allow-worker-drift", action="store_true",
                     help="run even when ~/.claude/agents/<worker>.md differs from the repo (permissionMode still refused)")
     ap.add_argument("-v", "--verbose", action="store_true", help="print each turn's final message")
