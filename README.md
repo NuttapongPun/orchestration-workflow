@@ -85,7 +85,7 @@ The orchestrator role is played by whatever model your session runs, so pick the
 |---|---|---|
 | Claude Code | Fable 5.1, or Opus 5.5 | `/model` |
 | Codex | GPT-6.1 Sol (high reasoning effort) | Select GPT-6.1 Sol in the active Codex session with `/model` |
-| Antigravity CLI | Gemini 3.1 Pro (High) | session model setting; `--agent` is ignored when resuming, so start fresh |
+| Antigravity CLI | Claude Opus 5.5 (Thinking), when available in the model selector on paid/non-trial Google AI Pro | Choose it as the fresh session model; `--agent` is ignored when resuming. This changes only the orchestrator session: easy workers remain Flash and hard workers remain Pro. |
 | OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; the paid stacks run their orchestrator at low effort | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
 
 Give this role the best judgment you can afford. Put a provider's cheapest tier in the orchestrator's seat and the workflow loses its point: it routes tasks to the wrong worker and accepts weak review verdicts. That is a statement about the role, not about any model name. A fast, cheap model is exactly what you want doing the work underneath, which is why the default `free` stack runs MiMo V2.6 Flash as its hard worker and Nemotron 3.5 Lightning as its easy one.
@@ -176,7 +176,7 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
 
 ## Runtime notes
 
-- **Antigravity CLI** reads global skills only from `~/.gemini/config/skills/`, not from `~/.agents/skills/` and not from the folders the `skills` CLI targets. `install.sh` creates the right link. `agy agent` lists only primary agents, so the workers do not appear there even though `invoke_subagent` can call them. Start the orchestrator session on the Pro model; `--agent` is ignored when resuming a conversation.
+- **Antigravity CLI** reads global skills only from `~/.gemini/config/skills/`, not from `~/.agents/skills/` and not from the folders the `skills` CLI targets. `install.sh` creates the right link. `agy agent` lists only primary agents, so the workers do not appear there even though `invoke_subagent` can call them. Use Claude Opus 5.5 (Thinking) as the fresh session model when it is available in the selector on paid/non-trial Google AI Pro; `--agent` is ignored when resuming. This session choice does not change worker routing: easy workers remain Flash and hard workers remain Pro.
 - **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run; only `investigate` is sandbox read-only.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
 - **OpenCode** 2.0 or newer is required: the agent files use its format (an ordered `permissions` rule list and `model: <provider/model>#<variant>`), which OpenCode 1 does not read. On macOS, `brew install anomalyco/tap/opencode-v2`; it conflicts with the v1 `opencode` formula, so uninstall that first.
