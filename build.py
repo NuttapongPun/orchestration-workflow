@@ -79,7 +79,7 @@ OPENCODE_STACKS = {
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna"),
     "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5"),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5"),
-    "cheap-openrouter":  oc_stack("openrouter/moonshotai/kimi-k3",          "openrouter/z-ai/glm-5.3",          "openrouter/deepseek/deepseek-v4-flash-0731"),
+    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4-flash-0731", effort={"orchestrate": "high", "easy-worker": "high", "review": "high"}),
 }
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", None)

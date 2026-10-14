@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, runs tests, returns a verdict.
 mode: subagent
-model: openrouter/z-ai/glm-5.3#high
+model: openrouter/deepseek/deepseek-v4-pro-0813#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: deny }

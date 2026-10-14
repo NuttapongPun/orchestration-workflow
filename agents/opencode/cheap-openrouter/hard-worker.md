@@ -1,7 +1,7 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: openrouter/z-ai/glm-5.3#high
+model: openrouter/deepseek/deepseek-v4-pro-0813#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: allow }

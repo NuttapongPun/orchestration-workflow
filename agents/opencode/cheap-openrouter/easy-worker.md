@@ -1,7 +1,7 @@
 ---
 description: Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content.
 mode: subagent
-model: openrouter/deepseek/deepseek-v4-flash-0731#medium
+model: openrouter/deepseek/deepseek-v4-flash-0731#high
 color: "#22c55e"
 permissions:
   - { action: edit, resource: "*", effect: allow }

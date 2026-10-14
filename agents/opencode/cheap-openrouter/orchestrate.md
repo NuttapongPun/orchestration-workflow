@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing
 mode: primary
-model: openrouter/moonshotai/kimi-k3#low
+model: openrouter/deepseek/deepseek-v4-pro-0813#high
 color: "#a78bfa"
 permissions:
   - { action: edit, resource: "*", effect: deny }
