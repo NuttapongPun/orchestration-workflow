@@ -9,9 +9,16 @@
 # Codex agent files are the exception and are always copied, since Codex rejects symlinked roles):
 #   ./install.sh
 #
+# Link mode is chosen automatically only when this script is run as a file on disk that sits in a
+# clone of this repo. Piped (`curl | bash`) or process-substituted (`bash <(curl ...)`) runs always
+# use copy mode, whatever the current directory contains.
+#
+# Codex: besides the agent files, the installer adds a top-level `web_search = "live"` to
+# ~/.codex/config.toml (creating the file if needed) unless a web_search setting is already there.
+#
 # Flags:  --yes                    replace existing installed files without asking
 #         --copy                   force copy mode even when run from a clone
-#         --link                   force link mode (the default when run from a clone)
+#         --link                   force link mode (the default when run from a clone; fails otherwise)
 #         --opencode-stack=<name>  which OpenCode model stack to install (default: free).
 #                                  <name> is a plain directory name under agents/opencode/
 #                                  (no slash, no leading dot). The names there today are:
@@ -72,16 +79,41 @@ if [[ $UNINSTALL -eq 1 ]]; then
     [[ -n "$skills_dir" && -L "$skills_dir/orchestrate" ]] && rm -f "$skills_dir/orchestrate" && say "removed $skills_dir/orchestrate"
   done
   [[ -e "$CANON" || -L "$CANON" ]] && rm -rf "$CANON" && say "removed $CANON"
-  say "Done. (Codex [agents] max_depth line left in place.)"
+  say "Done. (Left in place in ~/.codex/config.toml: any [agents] max_depth and web_search lines.)"
   exit 0
 fi
 
 # ------------------------------------------------------------------ source: clone next to script, or download
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
+# Link mode needs the directory of the script FILE, never the current directory. The path is
+# INSTALL_SELF, taken at top level next to `main "$@"` (see the bottom of the file): under
+# `curl | bash` it is empty, and under `bash <(curl ...)` it is a pipe (/dev/fd/N) that is not a
+# regular file, so both have no clone and use copy mode.
+is_clone() { # 0 = $1 is a checkout of this repo (no git needed)
+  [[ -n "$1" && -f "$1/install.sh" && -f "$1/build.py" && -d "$1/agents" && -f "$1/skills/orchestrate/SKILL.md" ]]
+}
+script_clone_dir() { # prints the clone this script file sits in; 1 = not run from a file in a clone
+  local p="$INSTALL_SELF" t n=0 d
+  [[ -n "$p" && -f "$p" ]] || return 1
+  while [[ -L "$p" && $n -lt 40 ]]; do   # ~/bin/install.sh -> clone/install.sh still counts
+    t="$(readlink "$p")"; [[ "$t" == /* ]] || t="$(dirname "$p")/$t"; p="$t"; n=$((n + 1))
+  done
+  d="$(cd "$(dirname "$p")" 2>/dev/null && pwd)" || return 1
+  is_clone "$d" || return 1
+  printf '%s\n' "$d"
+}
+SCRIPT_DIR="$(script_clone_dir || true)"
 if [[ -z "$MODE" ]]; then
-  if [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/agents" && -d "$SCRIPT_DIR/skills" ]]; then MODE="link"; else MODE="copy"; fi
+  if [[ -n "$SCRIPT_DIR" ]]; then MODE="link"; else MODE="copy"
+    is_clone "$PWD" && say "Note: $PWD is a clone, but this script was not run from a file in it, so copy mode is used. For link mode run ./install.sh there."
+  fi
 fi
 if [[ "$MODE" == "link" ]]; then
+  if [[ -z "$SCRIPT_DIR" ]]; then
+    { say "--link needs this script run as a file inside a clone of $REPO_SLUG, e.g."
+      say "  git clone https://github.com/$REPO_SLUG.git && ./orchestration-workflow/install.sh"
+      say "Piped (curl | bash) or process-substituted (bash <(curl ...)) runs have no clone to link to; drop --link to install by copy."; } >&2
+    exit 2
+  fi
   SRC="$SCRIPT_DIR"
 else
   TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
@@ -202,6 +234,10 @@ else
   if [[ $SKILL_VIA_CLI -eq 0 ]]; then
     if [[ "$MODE" == "link" ]]; then
       same_target "$CANON" "$SRC/skills/orchestrate" || { rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; ln -s "$SRC/skills/orchestrate" "$CANON"; say "  linked $CANON"; }
+      # The skills CLI's lock (~/.agents/.skill-lock.json) may still list orchestrate from an earlier
+      # copy install; the lock is left alone, so say what `npx skills update` would do to this link.
+      say "  note: linked to the clone, not managed by the skills CLI. If 'npx skills' installed orchestrate before,"
+      say "        'npx skills update' will replace this link with a copy of GitHub main. Re-run with --copy for the CLI-managed copy."
     else
       rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; cp -R "$SRC/skills/orchestrate" "$CANON"; say "  copied to $CANON"
     fi
@@ -222,8 +258,50 @@ for rt in "${FOUND[@]}"; do
   fi
   if [[ "$src" == "codex" ]]; then
     cfg="$HOME/.codex/config.toml"
-    if [[ -f "$cfg" ]] && ! grep -q '^\[agents\]' "$cfg"; then printf '\n[agents]\nmax_depth = 1\n' >> "$cfg"; say "  appended [agents] max_depth = 1 to $cfg"
-    elif [[ -f "$cfg" ]] && ! grep -q '^max_depth' "$cfg"; then say "  NOTE: [agents] exists in $cfg without max_depth; add 'max_depth = 1' to stop workers spawning workers"; fi
+    # Live web search is a session setting in Codex (agent role files cannot set it), so it goes in
+    # config.toml as a TOP-LEVEL key: prepended, because appended text would land inside the last
+    # [table]. Any existing web_search setting, at any level and in any form (top-level, a profile,
+    # the older [tools] web_search), is the user's choice and is left alone. Runs before the
+    # max_depth step so a freshly created file gets [agents] in the same run (idempotent re-runs).
+    # A config.toml may start with a UTF-8 BOM. Codex accepts it only as the very first bytes, so the
+    # new line goes after it, and the pattern checks allow it at the start of line 1.
+    # Every write is a condition or ends in `||`, so a read-only or immutable config (e.g. a
+    # home-manager symlink into the Nix store) prints a NOTE instead of aborting under set -e.
+    BOM=$'\xEF\xBB\xBF'
+    ws_note="# added by orchestration-workflow install.sh: live web search for Codex sessions"
+    ws_manual="add web_search = \"live\" at the top yourself for live web search"
+    # A web_search setting key, assigned bare or dotted (tools.web_search, profiles.x.web_search),
+    # optionally quoted, or the legacy web_search_request / web_search_cached (Codex maps
+    # web_search_cached = true to cached mode when web_search is unset); also inside an inline
+    # table. Mentions in table names ([mcp_servers.web_search]), other longer keys or values do not count.
+    ws_key="[\"']?web_search(_request|_cached)?[\"']?[[:space:]]*="
+    ws_re="^(${BOM})?[[:space:]]*([A-Za-z0-9_.\"'-]+\.)?${ws_key}|[{,][[:space:]]*${ws_key}"
+    if [[ ! -e "$cfg" && ! -L "$cfg" ]]; then
+      if mkdir -p "$(dirname "$cfg")" 2>/dev/null && { printf '%s\nweb_search = "live"\n' "$ws_note" > "$cfg"; } 2>/dev/null; then
+        say "  created $cfg with web_search = \"live\""
+      else say "  NOTE: could not create $cfg; $ws_manual"; fi
+    elif [[ ! -f "$cfg" || ! -r "$cfg" ]]; then
+      say "  NOTE: $cfg is not a readable regular file; $ws_manual"
+    elif grep -Eq "$ws_re" "$cfg"; then
+      say "  web_search already set in $cfg; left unchanged"
+    elif [[ ! -w "$cfg" ]]; then
+      say "  NOTE: $cfg is read-only; $ws_manual"
+    else
+      ws_tmp="$(mktemp 2>/dev/null)" || ws_tmp=""
+      # ws_from is a byte offset for tail -c: ${#ws_bom} would count characters, not bytes, in a UTF-8 locale.
+      ws_bom=""; ws_from=1; [[ "$(head -c 3 "$cfg")" == "$BOM" ]] && { ws_bom="$BOM"; ws_from=4; }
+      # Written back through `cat >` so a symlinked config.toml stays a symlink and keeps its mode.
+      if [[ -n "$ws_tmp" ]] \
+        && { printf '%s%s\nweb_search = "live"\n\n' "$ws_bom" "$ws_note"; tail -c +"$ws_from" "$cfg"; } > "$ws_tmp" 2>/dev/null \
+        && { cat "$ws_tmp" > "$cfg"; } 2>/dev/null; then
+        say "  added top-level web_search = \"live\" to $cfg"
+      else say "  NOTE: could not write $cfg; $ws_manual"; fi
+      [[ -z "$ws_tmp" ]] || rm -f "$ws_tmp"
+    fi
+    if [[ -f "$cfg" ]] && ! grep -Eq "^(${BOM})?[[:space:]]*\[agents\]" "$cfg"; then
+      if { printf '\n[agents]\nmax_depth = 1\n' >> "$cfg"; } 2>/dev/null; then say "  appended [agents] max_depth = 1 to $cfg"
+      else say "  NOTE: could not write $cfg; add '[agents]' with 'max_depth = 1' yourself to stop workers spawning workers"; fi
+    elif [[ -f "$cfg" ]] && ! grep -Eq "^(${BOM})?[[:space:]]*max_depth[[:space:]]*=" "$cfg"; then say "  NOTE: [agents] exists in $cfg without max_depth; add 'max_depth = 1' to stop workers spawning workers"; fi
   fi
 done
 
@@ -240,6 +318,12 @@ Run the orchestrator on the strongest model you have. Suggested:
 Update later: re-run this command$( [[ "$MODE" == "link" ]] && printf ', or git pull in the clone' ).
 EOF
 }
+
+# The script's own path, for link mode. It is read here at top level because inside a function
+# bash 5.2 reports BASH_SOURCE[0] as "main" for a piped script, which a stray file named `main`
+# would pass as a regular file. It must also equal $0: both are the script path when it is run as a
+# file, but piped runs have $0 = "bash" and an empty top-level BASH_SOURCE[0].
+INSTALL_SELF="${BASH_SOURCE[0]:-}"; [[ "$INSTALL_SELF" == "$0" ]] || INSTALL_SELF=""
 
 # Everything above is parsed before this line runs, so `curl | bash` cannot be cut short by a child reading stdin.
 main "$@"

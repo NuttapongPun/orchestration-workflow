@@ -16,7 +16,7 @@ skills/orchestrate/      the shared /orchestrate skill (the method) + one short 
 agents/claude/           worker subagents for Claude Code      -> ~/.claude/agents/*.md
 agents/codex/            worker subagents for Codex            -> ~/.codex/agents/*.toml
 agents/opencode/<stack>/ worker subagents + primary orchestrate agent for OpenCode, one directory per model stack -> ~/.config/opencode/agents/*.md
-install.sh               installs all of the above into the runtimes present on the machine: symlinks when run from a clone, copies for the one-line install (Codex worker files are always copied, since Codex rejects symlinked agent files). `--opencode-stack=<name>` picks the OpenCode stack.
+install.sh               installs all of the above into the runtimes present on the machine: symlinks when run as ./install.sh in a clone, copies for the one-line install (Codex worker files are always copied, since Codex rejects symlinked agent files). `--opencode-stack=<name>` picks the OpenCode stack.
 evals/                   behavioral tests for the skill (see evals/README.md). Not installed anywhere.
 ```
 
@@ -36,12 +36,15 @@ Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `
 
 "Read-only" in the table is the worker's role. How much of it each runtime enforces differs:
 
-- `investigate`: Codex runs it in the `read-only` sandbox. OpenCode denies its edit tools and limits its shell to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes). Claude Code gives it no edit tools but does give it `Bash`.
-- `review` and `review-hard` must run tests, so every runtime gives them a shell. Claude Code withholds the edit tools, OpenCode denies them, and Codex runs them in the `workspace-write` sandbox. In all three a reviewer can still write through its shell; staying read-only there is a prompt rule.
+- **Claude Code** gives the read-only workers no edit tools, but does give them `Bash`.
+- **OpenCode** denies their edit tools. `investigate` also gets a shell limited to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes); `review` and `review-hard` get a full shell so they can run tests.
+- **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is a prompt rule for all of them. Run Codex in the `workspace-write` sandbox (the default): reviewers need it to run tests.
+
+`review` and `review-hard` must run tests, so every runtime gives them a shell, and through it they can still write. Staying read-only there is a prompt rule.
 
 ## Install
 
-One command installs or updates everything. It detects which of the three runtimes are present, installs the worker agents into each, installs the skill (through the [`skills` CLI](https://skills.sh) when `npx` is available, otherwise by copying), and adds the Codex no-nesting setting (`[agents] max_depth = 1`) to an existing `~/.codex/config.toml` that has no `[agents]` section. If that section is already there without `max_depth`, it prints a note asking you to add the line yourself.
+One command installs or updates everything. It detects which of the three runtimes are present, installs the worker agents and the skill into each, and changes two Codex settings in `~/.codex/config.toml`: it adds the no-nesting setting (`[agents] max_depth = 1`) when the file has no `[agents]` section, and it sets `web_search = "live"` when no `web_search` setting is there yet (see [Codex web search](#codex-web-search)). If the `[agents]` section is already there without `max_depth`, it prints a note asking you to add the line yourself.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
@@ -53,7 +56,14 @@ If any installed file already exists and differs (worker agents or the skill), i
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --yes
 ```
 
-That is the whole install. Do not run `npx skills add` on this repo yourself; the installer already does that when the CLI is available, and the skill cannot work without the worker agents the installer adds.
+That is the whole install. Do not run `npx skills add` on this repo yourself; the installer already does that in copy mode when the CLI is available, and the skill cannot work without the worker agents the installer adds.
+
+**Copy mode and link mode.** The installer picks its mode from how it was started:
+
+- **Copy mode** is what `curl | bash` always uses. Files are copied into each runtime, and the skill is installed through the [`skills` CLI](https://skills.sh) (`npx skills add`) when `npx` is available, otherwise copied directly. This is the only mode that uses the `skills` CLI.
+- **Link mode** is used only when `install.sh` runs as a real file inside a clone (`./install.sh`). Runtime files, the skill included, become symlinks into the clone, so edits and `git pull` take effect without re-installing. The `skills` CLI does not manage this link, and the installer prints a note saying so: if the CLI installed `orchestrate` earlier, `npx skills update` will replace the link with a copy of GitHub `main`. Re-run `./install.sh` from the clone to restore the link.
+
+Codex worker files are copied in both modes, because Codex rejects symlinked agent files.
 
 OpenCode installs the **`free`** model stack unless you ask for another one. Pick a different one with `--opencode-stack=<name>`:
 
@@ -82,9 +92,15 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --uninstall
 ```
 
-It leaves the Codex `[agents] max_depth = 1` line in place.
+It leaves the Codex `[agents] max_depth = 1` and `web_search` lines in place.
 
 **Antigravity CLI is no longer supported.** If you installed this workflow for Antigravity earlier, neither updating nor uninstalling touches those files. Remove them by hand: `~/.gemini/config/agents/*.md` (the five workers) and `~/.gemini/config/skills/orchestrate`.
+
+### Codex web search
+
+Codex sets web search per session, not per agent. Its default, `cached`, answers from OpenAI's index without live access; only under `--yolo` or a full-access sandbox does the default become `live`. The installer therefore adds a top-level `web_search = "live"` to `~/.codex/config.toml` (creating the file if needed), but only when no `web_search` setting is there yet, in any form or profile; it never overwrites a value you set, and `--uninstall` leaves the line in place. If the file can't be written (read-only, immutable, or managed by a tool such as Nix home-manager), the installer prints a note and carries on, and you add the line yourself.
+
+The trade-off: with live search, the orchestrator and every worker browse the web without asking per call, which also exposes all of them to prompt injection from the pages they read. To opt out, set `web_search = "cached"` (or `"disabled"`) in `~/.codex/config.toml` before installing, or change it afterwards. Shell network access is a separate setting (`[sandbox_workspace_write] network_access`, off by default) that the installer does not touch.
 
 ## Choose the orchestrator model
 
@@ -165,7 +181,7 @@ This repo encodes one way of working. Fork it, or clone it, and change whatever 
 
 ### Set up the clone
 
-Run the installer from the clone. In that mode the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately without re-installing (Codex worker files are copied instead, because Codex rejects symlinked agent files; rerun `./install.sh` after rebuilding):
+Run the installer from the clone as `./install.sh`. That is link mode (see [Install](#install)): the runtime files become symlinks into the clone, so edits and `git pull` take effect immediately without re-installing (Codex worker files are copied instead, because Codex rejects symlinked agent files; rerun `./install.sh` after rebuilding):
 
 ```bash
 git clone https://github.com/NuttapongPun/orchestration-workflow.git
@@ -173,7 +189,7 @@ cd orchestration-workflow
 ./install.sh
 ```
 
-`--copy` forces copies even from a clone, and `--link` forces symlinks.
+`--copy` forces copy mode even from a clone. `--link` forces link mode and stops with an error when the script is not run as a file inside a clone.
 
 If you forked it, clone your fork instead and change `REPO_SLUG` at the top of `install.sh` so the one-line installer points at your fork.
 
@@ -189,7 +205,7 @@ After changing the skill or its plan gate, run `python3 evals/run.py --dry-run` 
 
 ## Runtime notes
 
-- **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run, which also lets them write in the workspace; only `investigate` is sandbox read-only.
+- **Codex** custom agents need Codex 0.153 or newer. An agent file sets the model, reasoning effort, and instructions; Codex ignores any `sandbox_mode` or approval setting in it. Every worker inherits the session's sandbox and approval settings: in `workspace-write` (the default) any worker, `investigate` included, can write in the workspace; in a `read-only` session reviewers cannot run tests that write caches or build output; under `--yolo` or full access every worker has full access. Run orchestration sessions in `workspace-write`. Web search and shell network access are session settings too (see [Codex web search](#codex-web-search)).
 - **OpenCode** review workers have full shell so tests and checks can run; only their edit tools are denied, so they can still write through the shell. `investigate` has its edit tools denied and a deny-by-default shell: an allowlist of read-only inspection commands (including `ls`, `cat`, `grep`, `rg`, `stat`, `which`, `command -v`, `git log`/`diff`/`show`/`status`, per-tool `--version` checks, and the read subcommands of `brew`, `mise`, and `uv`; the full list is `OC_READ_CMDS` in `build.py`), with commands that print the environment left off. On top of that, deny rules block flags and paths that write, run a chosen program, or expose secrets (output redirects, `find -exec`/`-delete`, `rg --pre`, `.env` paths, `/proc/*/environ`). The deny rules are best-effort: they match the command text before the shell expands it, and a redirect on a pipeline or group (`cat a | head > b`) is never checked, so `investigate` can still write a file that way; a determined or prompt-injected model can get past them, and a recursive `grep` or `rg` can still read `.env` contents. The comments above `OC_READ_CMDS` in `build.py` list the known gaps.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
 - **OpenCode** 2.0 or newer is required: the agent files use its format (an ordered `permissions` rule list and `model: <provider/model>#<variant>`), which OpenCode 1 does not read. On macOS, `brew install anomalyco/tap/opencode-v2`; it conflicts with the v1 `opencode` formula, so uninstall that first.

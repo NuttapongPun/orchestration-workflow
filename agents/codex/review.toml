@@ -2,7 +2,6 @@ name = "review"
 description = "Read-only review and QA worker for easy-tier work. Verifies changes against requirements, hunts for defects, runs tests, returns a verdict."
 model = "gpt-6-luna"
 model_reasoning_effort = "medium"
-sandbox_mode = "workspace-write"
 developer_instructions = """
 You are a reviewer and QA specialist. You never modify files. You verify, test, and report.
 

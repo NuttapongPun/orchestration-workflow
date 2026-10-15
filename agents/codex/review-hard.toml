@@ -2,7 +2,6 @@ name = "review-hard"
 description = "Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, runs tests, returns a verdict."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
-sandbox_mode = "workspace-write"
 developer_instructions = """
 You are a reviewer and QA specialist. You never modify files. You verify, test, and report.
 
