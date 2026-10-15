@@ -5,26 +5,7 @@ model: openrouter/openai/gpt-6-sol#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: deny }
-  - { action: shell, resource: "*", effect: ask }
-  - { action: shell, resource: "git diff *", effect: allow }
-  - { action: shell, resource: "git log *", effect: allow }
-  - { action: shell, resource: "git show *", effect: allow }
-  - { action: shell, resource: "git status *", effect: allow }
-  - { action: shell, resource: "npm test *", effect: allow }
-  - { action: shell, resource: "npm run *", effect: allow }
-  - { action: shell, resource: "pnpm test *", effect: allow }
-  - { action: shell, resource: "pnpm run *", effect: allow }
-  - { action: shell, resource: "yarn test *", effect: allow }
-  - { action: shell, resource: "bun test *", effect: allow }
-  - { action: shell, resource: "bun run *", effect: allow }
-  - { action: shell, resource: "npx *", effect: allow }
-  - { action: shell, resource: "pytest *", effect: allow }
-  - { action: shell, resource: "python -m pytest *", effect: allow }
-  - { action: shell, resource: "go test *", effect: allow }
-  - { action: shell, resource: "cargo test *", effect: allow }
-  - { action: shell, resource: "cargo check *", effect: allow }
-  - { action: shell, resource: "cargo clippy *", effect: allow }
-  - { action: shell, resource: "make test *", effect: allow }
+  - { action: shell, resource: "*", effect: allow }
   - { action: subagent, resource: "*", effect: deny }
   - { action: question, resource: "*", effect: deny }
 ---

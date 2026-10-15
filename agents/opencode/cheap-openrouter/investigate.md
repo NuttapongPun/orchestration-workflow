@@ -14,11 +14,93 @@ permissions:
   - { action: shell, resource: "head *", effect: allow }
   - { action: shell, resource: "tail *", effect: allow }
   - { action: shell, resource: "wc *", effect: allow }
+  - { action: shell, resource: "grep *", effect: allow }
+  - { action: shell, resource: "rg *", effect: allow }
+  - { action: shell, resource: "stat *", effect: allow }
+  - { action: shell, resource: "readlink *", effect: allow }
+  - { action: shell, resource: "realpath *", effect: allow }
+  - { action: shell, resource: "pwd", effect: allow }
+  - { action: shell, resource: "uname *", effect: allow }
+  - { action: shell, resource: "sw_vers *", effect: allow }
+  - { action: shell, resource: "which *", effect: allow }
+  - { action: shell, resource: "command -v *", effect: allow }
+  - { action: shell, resource: "type *", effect: allow }
   - { action: shell, resource: "git log *", effect: allow }
   - { action: shell, resource: "git show *", effect: allow }
   - { action: shell, resource: "git diff *", effect: allow }
   - { action: shell, resource: "git blame *", effect: allow }
   - { action: shell, resource: "git status *", effect: allow }
+  - { action: shell, resource: "brew --version", effect: allow }
+  - { action: shell, resource: "mise --version", effect: allow }
+  - { action: shell, resource: "uv --version", effect: allow }
+  - { action: shell, resource: "git --version", effect: allow }
+  - { action: shell, resource: "node --version", effect: allow }
+  - { action: shell, resource: "npm --version", effect: allow }
+  - { action: shell, resource: "pnpm --version", effect: allow }
+  - { action: shell, resource: "yarn --version", effect: allow }
+  - { action: shell, resource: "bun --version", effect: allow }
+  - { action: shell, resource: "deno --version", effect: allow }
+  - { action: shell, resource: "python --version", effect: allow }
+  - { action: shell, resource: "python3 --version", effect: allow }
+  - { action: shell, resource: "ruby --version", effect: allow }
+  - { action: shell, resource: "cargo --version", effect: allow }
+  - { action: shell, resource: "rustc --version", effect: allow }
+  - { action: shell, resource: "go version", effect: allow }
+  - { action: shell, resource: "brew list *", effect: allow }
+  - { action: shell, resource: "brew ls *", effect: allow }
+  - { action: shell, resource: "brew info *", effect: allow }
+  - { action: shell, resource: "brew config *", effect: allow }
+  - { action: shell, resource: "brew leaves *", effect: allow }
+  - { action: shell, resource: "brew deps *", effect: allow }
+  - { action: shell, resource: "brew uses *", effect: allow }
+  - { action: shell, resource: "brew --prefix *", effect: allow }
+  - { action: shell, resource: "brew --cellar *", effect: allow }
+  - { action: shell, resource: "brew --repository *", effect: allow }
+  - { action: shell, resource: "brew services list *", effect: allow }
+  - { action: shell, resource: "mise ls *", effect: allow }
+  - { action: shell, resource: "mise list *", effect: allow }
+  - { action: shell, resource: "mise current *", effect: allow }
+  - { action: shell, resource: "mise where *", effect: allow }
+  - { action: shell, resource: "mise which *", effect: allow }
+  - { action: shell, resource: "mise version", effect: allow }
+  - { action: shell, resource: "mise config", effect: allow }
+  - { action: shell, resource: "mise config ls *", effect: allow }
+  - { action: shell, resource: "mise config list *", effect: allow }
+  - { action: shell, resource: "mise config get *", effect: allow }
+  - { action: shell, resource: "mise settings ls *", effect: allow }
+  - { action: shell, resource: "mise settings list *", effect: allow }
+  - { action: shell, resource: "mise settings get *", effect: allow }
+  - { action: shell, resource: "mise plugins ls *", effect: allow }
+  - { action: shell, resource: "uv self version *", effect: allow }
+  - { action: shell, resource: "uv tool list *", effect: allow }
+  - { action: shell, resource: "uv tool dir *", effect: allow }
+  - { action: shell, resource: "uv python list", effect: allow }
+  - { action: shell, resource: "uv python list --only-installed", effect: allow }
+  - { action: shell, resource: "uv python dir *", effect: allow }
+  - { action: shell, resource: "uv pip list *", effect: allow }
+  - { action: shell, resource: "uv pip show *", effect: allow }
+  - { action: shell, resource: "uv pip freeze *", effect: allow }
+  - { action: shell, resource: "uv tree --frozen *", effect: allow }
+  - { action: shell, resource: "uv tree --locked *", effect: allow }
+  - { action: shell, resource: "uv cache dir *", effect: allow }
+  - { action: shell, resource: "find *-delete*", effect: deny }
+  - { action: shell, resource: "find *-exec*", effect: deny }
+  - { action: shell, resource: "find *-ok*", effect: deny }
+  - { action: shell, resource: "find *-fprint*", effect: deny }
+  - { action: shell, resource: "find *-fls*", effect: deny }
+  - { action: shell, resource: "rg *--pre*", effect: deny }
+  - { action: shell, resource: "rg *--hostname-bin*", effect: deny }
+  - { action: shell, resource: "brew *.rb*", effect: deny }
+  - { action: shell, resource: "uv *--python*", effect: deny }
+  - { action: shell, resource: "uv * -p*", effect: deny }
+  - { action: shell, resource: "git *--output*", effect: deny }
+  - { action: shell, resource: "*/proc/*/environ*", effect: deny }
+  - { action: shell, resource: "* .env*", effect: deny }
+  - { action: shell, resource: "*/.env*", effect: deny }
+  - { action: shell, resource: "*'.env*", effect: deny }
+  - { action: shell, resource: "*\".env*", effect: deny }
+  - { action: shell, resource: "*<.env*", effect: deny }
+  - { action: shell, resource: "*>*", effect: deny }
   - { action: subagent, resource: "*", effect: deny }
   - { action: question, resource: "*", effect: deny }
 ---
