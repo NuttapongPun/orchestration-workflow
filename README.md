@@ -16,7 +16,8 @@ skills/orchestrate/      the shared /orchestrate skill (the method) + one short 
 agents/claude/           worker subagents for Claude Code      -> ~/.claude/agents/*.md
 agents/codex/            worker subagents for Codex            -> ~/.codex/agents/*.toml
 agents/opencode/<stack>/ worker subagents + primary orchestrate agent for OpenCode, one directory per model stack -> ~/.config/opencode/agents/*.md
-install.sh               symlinks all of the above into the runtimes present on the machine (Codex worker files are copied, since Codex rejects symlinked agent files). `--opencode-stack=<name>` picks the OpenCode stack.
+install.sh               installs all of the above into the runtimes present on the machine: symlinks when run from a clone, copies for the one-line install (Codex worker files are always copied, since Codex rejects symlinked agent files). `--opencode-stack=<name>` picks the OpenCode stack.
+evals/                   behavioral tests for the skill (see evals/README.md). Not installed anywhere.
 ```
 
 The same five workers exist in every runtime, with identical prompts. Only the model names differ:
@@ -33,9 +34,14 @@ The same five workers exist in every runtime, with identical prompts. Only the m
 
 Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `[agents] max_depth = 1`, OpenCode workers deny the `subagent` permission.
 
+"Read-only" in the table is the worker's role. How much of it each runtime enforces differs:
+
+- `investigate`: Codex runs it in the `read-only` sandbox. OpenCode denies its edit tools and limits its shell to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes). Claude Code gives it no edit tools but does give it `Bash`.
+- `review` and `review-hard` must run tests, so every runtime gives them a shell. Claude Code withholds the edit tools, OpenCode denies them, and Codex runs them in the `workspace-write` sandbox. In all three a reviewer can still write through its shell; staying read-only there is a prompt rule.
+
 ## Install
 
-One command installs or updates everything. It detects which of the three runtimes are present, installs the worker agents into each, installs the skill (through the [`skills` CLI](https://skills.sh) when `npx` is available, otherwise by copying), and adds the Codex no-nesting setting if it is missing.
+One command installs or updates everything. It detects which of the three runtimes are present, installs the worker agents into each, installs the skill (through the [`skills` CLI](https://skills.sh) when `npx` is available, otherwise by copying), and adds the Codex no-nesting setting (`[agents] max_depth = 1`) to an existing `~/.codex/config.toml` that has no `[agents]` section. If that section is already there without `max_depth`, it prints a note asking you to add the line yourself.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
@@ -76,6 +82,10 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --uninstall
 ```
 
+It leaves the Codex `[agents] max_depth = 1` line in place.
+
+**Antigravity CLI is no longer supported.** If you installed this workflow for Antigravity earlier, neither updating nor uninstalling touches those files. Remove them by hand: `~/.gemini/config/agents/*.md` (the five workers) and `~/.gemini/config/skills/orchestrate`.
+
 ## Choose the orchestrator model
 
 The orchestrator role is played by whatever model your session runs, so pick the strongest one available before typing `/orchestrate`. It does the judgment work (decomposition, briefing, judging review verdicts) and spends few tokens, so a stronger model raises quality more than it raises cost.
@@ -84,7 +94,7 @@ The orchestrator role is played by whatever model your session runs, so pick the
 |---|---|---|
 | Claude Code | Fable 5.1, or Opus 5.5 | `/model` |
 | Codex | GPT-6.1 Sol (high reasoning effort) | Select GPT-6.1 Sol in the active Codex session with `/model` |
-| OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; the paid stacks run their orchestrator at low effort | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
+| OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; `openai` and `cheap-openrouter` run their orchestrator at high effort, the other paid stacks at low | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
 
 Give this role the best judgment you can afford. Put a provider's cheapest tier in the orchestrator's seat and the workflow loses its point: it routes tasks to the wrong worker and accepts weak review verdicts. That is a statement about the role, not about any model name. A fast, cheap model is exactly what you want doing the work underneath, which is why the default `free` stack runs MiMo V2.6 Flash as its hard worker and Nemotron 3.5 Lightning as its easy one.
 
@@ -117,14 +127,14 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
-| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731#low` |
-| `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731#high` |
-| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna` | `openrouter/openai/gpt-6-luna` | `anthropic/claude-sonnet-5` | `openrouter/anthropic/claude-sonnet-5` | `openrouter/deepseek/deepseek-v4-flash-0731#high` |
-| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol` | `anthropic/claude-opus-5-5` | `openrouter/anthropic/claude-opus-5.5` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#low` | `anthropic/claude-opus-5-5#low` | `openrouter/anthropic/claude-opus-5.5#low` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5#low` | `openrouter/anthropic/claude-sonnet-5#low` | `openrouter/deepseek/deepseek-v4-flash-0731#low` |
+| `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5#medium` | `openrouter/anthropic/claude-sonnet-5#medium` | `openrouter/deepseek/deepseek-v4-flash-0731#high` |
+| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5#medium` | `openrouter/anthropic/claude-sonnet-5#medium` | `openrouter/deepseek/deepseek-v4-flash-0731#high` |
+| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
 
-**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. OpenCode 2 takes effort as the model's variant, so a level is written as `model: <provider/model>#<level>`, and `None` writes the bare model with no variant, which is what you want for a model that has no effort variants. The `openai` stack uses GPT-6.1 Sol at high effort for `orchestrate`, `hard-worker`, and `review-hard`; its easy agents run Luna at medium, except `investigate` at low. Other paid stacks use `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. The `free` stack sets `None` on all six, because it is unverified which effort variants OpenCode Zen offers for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
+**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. OpenCode 2 takes effort as the model's variant, so a level is written as `model: <provider/model>#<level>`, and `None` writes the bare model with no variant, which is what you want for a model that has no effort variants. The `openai` stack uses GPT-6.1 Sol at high effort for `orchestrate`, `hard-worker`, and `review-hard`; its easy agents run Luna at medium, except `investigate` at low. `openai-openrouter`, `claude`, and `claude-openrouter` use `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. `cheap-openrouter` differs; see its note below. The `free` stack sets `None` on all six, because it is unverified which effort variants OpenCode Zen offers for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
 
 
 Rough cost per million tokens (input / output), OpenRouter list prices in October 2026:
@@ -133,7 +143,6 @@ Rough cost per million tokens (input / output), OpenRouter list prices in Octobe
 |---|---|---|
 | Muse Spark 1.3 (contributor)† / MiMo V2.6 Flash / Nemotron 3.5 Lightning, free on OpenCode Zen | $0 | $0 |
 | GPT-6.1 Sol / GPT-6 Luna | $2 / $0.10 | $10 / $0.50 |
-| GPT-6 Astra | $10 | $50 |
 | Claude Opus 5.5 / Sonnet 5 | $4 / $2 | $20 / $10 |
 | DeepSeek V4 Pro 0813 / V4 Flash 0731 | $0.66 / $0.14 | $1.98 / $0.28 |
 
@@ -164,6 +173,8 @@ cd orchestration-workflow
 ./install.sh
 ```
 
+`--copy` forces copies even from a clone, and `--link` forces symlinks.
+
 If you forked it, clone your fork instead and change `REPO_SLUG` at the top of `install.sh` so the one-line installer points at your fork.
 
 ### Make a change
@@ -172,12 +183,14 @@ If you forked it, clone your fork instead and change `REPO_SLUG` at the top of `
 2. Run `python3 build.py` to regenerate the files for every runtime.
 3. Start a fresh session in the runtime to pick up the change. Commit when you are happy with it.
 
-Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapping OpenCode to another provider or price point needs no edit at all: re-run the installer with `--opencode-stack=<name>` (see the stacks above). Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, and a row in `install.sh`.
+Changing a model for Claude Code or Codex is a one-line edit in the `MODELS` table; OpenCode's models live in `OPENCODE_STACKS`. Swapping OpenCode to another provider or price point needs no edit at all: re-run the installer with `--opencode-stack=<name>` (see the stacks above). Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/` and a line in step 0 of the skill (both are generated, so add them in `build.py`), and a row in `install.sh`.
+
+After changing the skill or its plan gate, run `python3 evals/run.py --dry-run` to validate the eval scenarios. A live run (Claude Code only) tests the *installed* skill and costs money; see [`evals/README.md`](evals/README.md).
 
 ## Runtime notes
 
-- **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run; only `investigate` is sandbox read-only.
-- **OpenCode** review workers have full shell so tests and checks can run; only their edit tools are denied. `investigate` is limited to a read-only command allowlist.
+- **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run, which also lets them write in the workspace; only `investigate` is sandbox read-only.
+- **OpenCode** review workers have full shell so tests and checks can run; only their edit tools are denied, so they can still write through the shell. `investigate` has its edit tools denied and a deny-by-default shell: an allowlist of read-only inspection commands (including `ls`, `cat`, `grep`, `rg`, `stat`, `which`, `command -v`, `git log`/`diff`/`show`/`status`, per-tool `--version` checks, and the read subcommands of `brew`, `mise`, and `uv`; the full list is `OC_READ_CMDS` in `build.py`), with commands that print the environment left off. On top of that, deny rules block flags and paths that write, run a chosen program, or expose secrets (output redirects, `find -exec`/`-delete`, `rg --pre`, `.env` paths, `/proc/*/environ`). The deny rules are best-effort: they match the command text before the shell expands it, and a redirect on a pipeline or group (`cat a | head > b`) is never checked, so `investigate` can still write a file that way; a determined or prompt-injected model can get past them, and a recursive `grep` or `rg` can still read `.env` contents. The comments above `OC_READ_CMDS` in `build.py` list the known gaps.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
 - **OpenCode** 2.0 or newer is required: the agent files use its format (an ordered `permissions` rule list and `model: <provider/model>#<variant>`), which OpenCode 1 does not read. On macOS, `brew install anomalyco/tap/opencode-v2`; it conflicts with the v1 `opencode` formula, so uninstall that first.
 - **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In Claude Code and Codex it is a prompt rule.
@@ -191,7 +204,7 @@ Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapp
   ```
 
   If your install does ask for a credential, run `opencode auth login` and pick OpenCode Zen. Free models are rate-limited and can be withdrawn; read the contributor-terms warning under "OpenCode model stacks" before pointing this stack at private code.
-- **If you pick the `openai` stack, connect the OpenAI provider first.** Its orchestrator and hard reviewers use `openai/gpt-6.1-sol#high`; easy workers use `openai/gpt-6-luna`. Link the provider once, either with a ChatGPT login or an API key:
+- **If you pick the `openai` stack, connect the OpenAI provider first.** Its orchestrator, `hard-worker`, and `review-hard` use `openai/gpt-6.1-sol#high`; the easy tier uses `openai/gpt-6-luna` (`#medium`, and `#low` for `investigate`). Link the provider once, either with a ChatGPT login or an API key:
 
   ```bash
   opencode auth login      # choose OpenAI, then ChatGPT login or API key
