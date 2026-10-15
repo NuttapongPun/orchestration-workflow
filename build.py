@@ -6,7 +6,6 @@ Outputs (all inside this repo, never in $HOME):
   skills/orchestrate/          shared /orchestrate skill
   agents/claude/*.md           Claude Code subagents
   agents/codex/*.toml          Codex custom subagents
-  agents/antigravity/*.md      Antigravity CLI (agy) subagents
   agents/opencode/<stack>/*.md OpenCode subagents + primary orchestrate agent, one dir per model stack
 install.sh links these into each runtime (OpenCode: the stack chosen with --opencode-stack=<name>).
 """
@@ -26,7 +25,6 @@ EFFORT_OPENAI = {**EFFORT, "investigate": "low"}
 MODELS = {
     "claude":      {"easy": "sonnet",      "hard": "opus"},
     "codex":       {"easy": "gpt-6-luna",  "hard": "gpt-6.1-sol"},
-    "antigravity": {"easy": "flash",       "hard": "pro"},
 }
 
 # ------------------------------------------------------------------ OpenCode model stacks
@@ -302,17 +300,6 @@ for n, body in BODIES.items():
           f'sandbox_mode = "{sandbox}"\n'
           f'developer_instructions = """\n{body}"""\n')
 
-# ------------------------------------------------------------------ Antigravity
-AG_READ = ["view_file", "run_command", "search_web", "read_url_content", "manage_task"]
-AG_WRITE = AG_READ + ["write_to_file", "replace_file_content"]
-for n, body in BODIES.items():
-    tools = AG_READ if n in READONLY else AG_WRITE
-    policy = "sandbox" if n == "investigate" else "auto"
-    fm = ["---", f"name: {n}", f"description: {DESC[n]}", "subagent: true", "mainAgent: false",
-          f"model: {MODELS['antigravity'][TIER[n]]}", f"commandExecutionPolicy: {policy}", "tools:"]
-    fm += [f"  - {t}" for t in tools] + ["---", ""]
-    write(f"agents/antigravity/{n}.md", "\n".join(fm) + "\n" + body)
-
 # ------------------------------------------------------------------ OpenCode
 # OpenCode 2 format: `permissions` is an ordered rule list where the last match wins, so each
 # broad rule comes before its exceptions. A shell pattern ending in " *" also matches the bare command.
@@ -442,7 +429,6 @@ Identify which runtime you are running in and read the matching file before doin
 
 - Claude Code: `references/claude-code.md`
 - Codex: `references/codex.md`
-- Antigravity CLI (`agy`): `references/antigravity.md`
 - OpenCode: `references/opencode.md`
 
 The reference file names the exact dispatch mechanism and model rule for that runtime. If no file matches your runtime, or you cannot read the matching file, stop and report **blocked on runtime binding**. If the binding is no longer in your context, for example after compaction, re-read it before the next dispatch.
@@ -557,16 +543,6 @@ write("skills/orchestrate/references/codex.md", """# Codex binding
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`.
 - **Available agents:** read the runtime's subagent tool description before dispatching. It is the source of truth for names and callable models.
-""")
-
-write("skills/orchestrate/references/antigravity.md", """# Antigravity CLI (agy) binding
-
-- **Session model:** run the orchestrator in a fresh session using Claude Opus 5.5 (Thinking), when available in the model selector on paid/non-trial Google AI Pro. Check the session model before starting; if it is not Opus 5.5 (Thinking), tell the commander to switch and stop. `--agent` is ignored when resuming, so start a fresh session. This session choice does not alter worker routing: easy tier remains `flash`, hard tier remains `pro`.
-- **Dispatch:** the `invoke_subagent` tool with the worker name: `investigate`, `easy-worker`, `hard-worker`, `review`, `review-hard`. Worker definitions live in `~/.gemini/config/agents/*.md`, or per workspace in `.agents/agents/`.
-- **Model rule:** each worker file pins its tier. Easy tier is `flash`, hard tier is `pro`. Do not invoke a worker with the model left on inherit.
-- **No nesting:** worker tool lists exclude `invoke_subagent`.
-- **Concurrency:** invoke every ready task in the wave before waiting on any of them.
-- **Available agents:** run the agent listing or read the tool description before dispatching. If the five workers are not present, report blocked on worker availability.
 """)
 
 write("skills/orchestrate/references/opencode.md", """# OpenCode binding

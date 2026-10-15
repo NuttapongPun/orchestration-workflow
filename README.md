@@ -1,6 +1,6 @@
 # orchestration-workflow
 
-One orchestration workflow that works the same way in four coding agents: **Claude Code**, **Codex**, **Antigravity CLI (`agy`)**, and **OpenCode**.
+One orchestration workflow that works the same way in three coding agents: **Claude Code**, **Codex**, and **OpenCode**.
 
 The model you are talking to acts as an **orchestrator**: it breaks the job into tasks, briefs worker subagents, sends the results to a reviewer, judges the evidence, and reports once. It does not write code itself. Hard tasks go to a strong worker model, easy tasks to a cheap one. This keeps the expensive model's context small, because the workers hold the files, search results, and command output, and it routes cost by task difficulty.
 
@@ -15,28 +15,27 @@ build.py                 single source of truth: worker prompts + model table. G
 skills/orchestrate/      the shared /orchestrate skill (the method) + one short binding file per runtime
 agents/claude/           worker subagents for Claude Code      -> ~/.claude/agents/*.md
 agents/codex/            worker subagents for Codex            -> ~/.codex/agents/*.toml
-agents/antigravity/      worker subagents for Antigravity CLI  -> ~/.gemini/config/agents/*.md
 agents/opencode/<stack>/ worker subagents + primary orchestrate agent for OpenCode, one directory per model stack -> ~/.config/opencode/agents/*.md
 install.sh               symlinks all of the above into the runtimes present on the machine (Codex worker files are copied, since Codex rejects symlinked agent files). `--opencode-stack=<name>` picks the OpenCode stack.
 ```
 
 The same five workers exist in every runtime, with identical prompts. Only the model names differ:
 
-| Worker | Tier | Claude Code | Codex | Antigravity | OpenCode\* |
-|---|---|---|---|---|---|
-| `investigate` | easy, read-only | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
-| `easy-worker` | easy | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
-| `hard-worker` | hard | opus | gpt-6.1-sol | pro | mimo-v2.6-flash-free |
-| `review` | easy, read-only | sonnet | gpt-6-luna | flash | nemotron-3.5-lightning-free |
-| `review-hard` | hard, read-only | opus | gpt-6.1-sol | pro | mimo-v2.6-flash-free |
+| Worker | Tier | Claude Code | Codex | OpenCode\* |
+|---|---|---|---|---|
+| `investigate` | easy, read-only | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
+| `easy-worker` | easy | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
+| `hard-worker` | hard | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
+| `review` | easy, read-only | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
+| `review-hard` | hard, read-only | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
 
 \* The OpenCode column shows the default `free` stack. OpenCode's models are chosen per install with `--opencode-stack=<name>`; see [OpenCode model stacks](#opencode-model-stacks).
 
-Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `[agents] max_depth = 1`, Antigravity workers' tool lists exclude `invoke_subagent`, OpenCode workers deny the `subagent` permission.
+Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `[agents] max_depth = 1`, OpenCode workers deny the `subagent` permission.
 
 ## Install
 
-One command installs or updates everything. It detects which of the four runtimes are present, installs the worker agents into each, installs the skill (through the [`skills` CLI](https://skills.sh) when `npx` is available, otherwise by copying), and adds the Codex no-nesting setting if it is missing.
+One command installs or updates everything. It detects which of the three runtimes are present, installs the worker agents into each, installs the skill (through the [`skills` CLI](https://skills.sh) when `npx` is available, otherwise by copying), and adds the Codex no-nesting setting if it is missing.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
@@ -60,7 +59,7 @@ The names, and an install command for every stack, are listed under [OpenCode mo
 
 Then start a **fresh** session:
 
-- **Claude Code, Antigravity:** type `/orchestrate`. **Codex:** type `$orchestrate`. The skill is user-invoked only; the model never triggers it on its own (Codex needs `policy.allow_implicit_invocation: false` for this, which `build.py` writes into the skill's `agents/openai.yaml`).
+- **Claude Code:** type `/orchestrate`. **Codex:** type `$orchestrate`. The skill is user-invoked only; the model never triggers it on its own (Codex needs `policy.allow_implicit_invocation: false` for this, which `build.py` writes into the skill's `agents/openai.yaml`).
 - **OpenCode:** select the `orchestrate` primary agent. The skill is not used there. The default `free` stack uses OpenCode Zen's free models (`opencode/...`), which worked here with no provider credential of their own. Other stacks need their provider connected first (see Runtime notes).
 
 **Plan gate.** The orchestrator stops for your approval before the first wave that writes anything when a task is destructive or externally visible, when the plan is complex (two or more hard-tier implementation tasks, not counting review, or one whose wrong result is expensive to detect or undo), or when you asked for a plan, for example with "plan first". Otherwise it proceeds without asking. Answering its questions or suggesting changes is not approval; it re-reports the plan, still blocked on you, and waits for an explicit go. Read-only investigation still runs before the gate.
@@ -85,7 +84,6 @@ The orchestrator role is played by whatever model your session runs, so pick the
 |---|---|---|
 | Claude Code | Fable 5.1, or Opus 5.5 | `/model` |
 | Codex | GPT-6.1 Sol (high reasoning effort) | Select GPT-6.1 Sol in the active Codex session with `/model` |
-| Antigravity CLI | Claude Opus 5.5 (Thinking), when available in the model selector on paid/non-trial Google AI Pro | Choose it as the fresh session model; `--agent` is ignored when resuming. This changes only the orchestrator session: easy workers remain Flash and hard workers remain Pro. |
 | OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; the paid stacks run their orchestrator at low effort | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
 
 Give this role the best judgment you can afford. Put a provider's cheapest tier in the orchestrator's seat and the workflow loses its point: it routes tasks to the wrong worker and accepts weak review verdicts. That is a statement about the role, not about any model name. A fast, cheap model is exactly what you want doing the work underneath, which is why the default `free` stack runs MiMo V2.6 Flash as its hard worker and Nemotron 3.5 Lightning as its easy one.
@@ -171,19 +169,18 @@ If you forked it, clone your fork instead and change `REPO_SLUG` at the top of `
 ### Make a change
 
 1. Edit the prompts, models, or effort levels in `build.py`. Every worker prompt is defined exactly once there.
-2. Run `python3 build.py` to regenerate the files for all four runtimes.
+2. Run `python3 build.py` to regenerate the files for every runtime.
 3. Start a fresh session in the runtime to pick up the change. Commit when you are happy with it.
 
 Changing a model for one runtime is a one-line edit in the `MODELS` table. Swapping OpenCode to another provider or price point needs no edit at all: re-run the installer with `--opencode-stack=<name>` (see the stacks above). Adding a runtime means a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, and a row in `install.sh`.
 
 ## Runtime notes
 
-- **Antigravity CLI** reads global skills only from `~/.gemini/config/skills/`, not from `~/.agents/skills/` and not from the folders the `skills` CLI targets. `install.sh` creates the right link. `agy agent` lists only primary agents, so the workers do not appear there even though `invoke_subagent` can call them. Use Claude Opus 5.5 (Thinking) as the fresh session model when it is available in the selector on paid/non-trial Google AI Pro; `--agent` is ignored when resuming. This session choice does not change worker routing: easy workers remain Flash and hard workers remain Pro.
 - **Codex** custom agents need Codex 0.153 or newer. The review workers use the `workspace-write` sandbox so tests can run; only `investigate` is sandbox read-only.
 - **OpenCode** review workers have full shell so tests and checks can run; only their edit tools are denied. `investigate` is limited to a read-only command allowlist.
 - **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
 - **OpenCode** 2.0 or newer is required: the agent files use its format (an ordered `permissions` rule list and `model: <provider/model>#<variant>`), which OpenCode 1 does not read. On macOS, `brew install anomalyco/tap/opencode-v2`; it conflicts with the v1 `opencode` formula, so uninstall that first.
-- **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In the other three it is a prompt rule.
+- **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In Claude Code and Codex it is a prompt rule.
 - **OpenCode's orchestrator dispatches every worker in the background** (`background: true` on the `subagent` tool), then ends its turn. You can keep talking to it while workers run; each result arrives as a message and the orchestrator picks the workflow up from there. New work that touches files a running worker writes waits for that worker.
 - **OpenCode's default `free` stack needs no provider login.** Its agents reference OpenCode Zen's free models (`opencode/muse-spark-1.3-contributor-free`, `opencode/mimo-v2.6-flash-free`, `opencode/nemotron-3.5-lightning-free`). A probe on a machine whose `opencode auth list` held only OpenRouter and OpenAI credentials, with nothing for OpenCode Zen, answered normally:
 

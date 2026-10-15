@@ -26,7 +26,7 @@ Preserve these when adapting. Each one closes a failure the workflow was built t
 
 ### Install for a human
 
-1. Detect which runtimes they use: `~/.claude`, `~/.codex`, `~/.gemini/config`, `~/.config/opencode`. The installer detects the same set.
+1. Detect which runtimes they use: `~/.claude`, `~/.codex`, `~/.config/opencode`. The installer detects the same set.
 2. Run the one-line installer from `README.md`. Add `--yes` only when the human has said existing workers may be replaced.
 3. Ask which orchestrator model they will use per runtime and point them at the table in `README.md`. For OpenCode, ask which model stack they want: the installer takes `--opencode-stack=<name>` and defaults to `free` (OpenCode Zen's free models, no provider login needed in the probe recorded in `README.md`). The names are the directories under `agents/opencode/`. Any other stack needs that provider linked first (`openai` needs OpenAI, `claude` needs Anthropic, `*-openrouter` needs OpenRouter). Warn them that `free`'s orchestrator is a contributor model: Meta may train on what it sees, so it is wrong for confidential code.
 4. Verify with the checks below. Done when every runtime they use lists all five workers.
@@ -47,17 +47,14 @@ Three touch points, all required: a generator block in `build.py` that writes `a
 Each check is a headless run that asks the runtime to list its subagents. A missing worker means the file was not loaded; read the runtime's own log before editing anything.
 
 - **Claude Code:** `claude -p "Do not use any tools. List the custom subagent types available through the Agent tool." --model sonnet` should name all five.
-- **Antigravity CLI:** `agy -p "Do not call any tools. List the subagents you could invoke with invoke_subagent." --mode plan` should name all five. `agy agent` will not list them (it shows primary agents only); that is expected.
 - **Codex:** `python3 -c "import tomllib,glob;[tomllib.load(open(f,'rb')) for f in glob.glob('$HOME/.codex/agents/*.toml')]"` must parse, and `~/.codex/config.toml` must contain `max_depth = 1` under `[agents]`.
 - **OpenCode:** `opencode --version` must be 2.0 or newer. `opencode debug agents | python3 -c "import json,sys;[print(a['id'],a['mode']) for a in json.load(sys.stdin)]"` should list the five workers as `subagent` and `orchestrate` as `primary`. `grep '^model:' ~/.config/opencode/agents/*.md` should print the installed stack's model IDs (default `free`: `opencode/muse-spark-1.3-contributor-free` for `orchestrate`, `opencode/mimo-v2.6-flash-free` for `hard-worker` and `review-hard`, `opencode/nemotron-3.5-lightning-free` for `investigate`, `easy-worker`, and `review`). Anything else means a different `--opencode-stack` was installed, or the files are stale. `free` sets no effort, so its model lines carry no `#<variant>` suffix; every other stack's do.
-- **Skill:** `~/.agents/skills/orchestrate/SKILL.md` exists and `~/.claude/skills/orchestrate`, `~/.codex/skills/orchestrate`, `~/.gemini/config/skills/orchestrate` resolve to it.
+- **Skill:** `~/.agents/skills/orchestrate/SKILL.md` exists and `~/.claude/skills/orchestrate` and `~/.codex/skills/orchestrate` resolve to it.
 - **Behavior:** after changing the skill or its plan gate, run `python3 evals/run.py --dry-run`; a live run (`python3 evals/run.py --model <orchestrator model>`, Claude Code only) tests the *installed* skill and costs money, so reinstall first and run it only when the human asks; see `evals/README.md`.
 
 ## Facts you cannot find by reading the files
 
-- Antigravity CLI loads global skills only from `~/.gemini/config/skills/`. It ignores `~/.agents/skills/` and the two folders the `skills` CLI writes for it. This was confirmed by a probe, not documentation.
 - Codex 0.155 opens role files under `~/.codex/agents/` with O_NOFOLLOW at spawn time. A symlinked file is listed as available but every spawn fails with "agent type is currently not available". `install.sh` therefore copies the Codex files even in link mode. This was confirmed by a probe.
-- Antigravity ignores `--agent` when resuming a conversation. Orchestration there needs a fresh session using Claude Opus 5.5 (Thinking), when available in the selector on paid/non-trial Google AI Pro. This is the orchestrator session model only; worker files still route easy workers to Flash and hard workers to Pro.
 - Claude Code does not read `~/.agents/skills/` directly. The symlink in `~/.claude/skills/` is what makes the skill visible.
 - Codex ignores `disable-model-invocation`. It lists the skill to the model, including in worker threads, unless `agents/openai.yaml` sets `policy.allow_implicit_invocation: false`, which `build.py` writes. This was confirmed from Codex session logs (0.153 to 0.159) and the binary (0.160.1).
 - Codex custom agents need 0.153 or newer. `max_depth`, `max_concurrent_threads_per_session`, `default_subagent_model`, and `default_subagent_reasoning_effort` are the `[agents]` keys the binary accepts.

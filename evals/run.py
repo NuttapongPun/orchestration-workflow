@@ -5,8 +5,8 @@ Each scenario in evals/scenarios/*.json runs in a fresh throwaway copy of a
 fixture under the system temp dir, never in this repo. Claude Code runs are
 automated: the runner drives `claude -p` headless, parses the stream-json
 events, checks the scenario's assertions, and prints a pass/fail table.
-Codex, Antigravity CLI and OpenCode are manual: the runner prepares the
-fixture and prints the exact command to run. See evals/README.md.
+Codex and OpenCode are manual: the runner prepares the fixture and prints
+the exact command to run. See evals/README.md.
 
     python3 evals/run.py --dry-run                      # validate scenarios, print commands; no session
     python3 evals/run.py --scenario 01 --model sonnet   # one live run
@@ -90,7 +90,6 @@ SAFETY_CHECKS = {"forbidden_tools", "allowed_subagent_types", "not_dispatched", 
 RUNTIMES = {
     "claude-code": {"automated": True, "skill_link": HOME / ".claude/skills/orchestrate", "prefix": "/orchestrate "},
     "codex": {"automated": False, "skill_link": HOME / ".codex/skills/orchestrate", "prefix": "$orchestrate "},
-    "antigravity": {"automated": False, "skill_link": HOME / ".gemini/config/skills/orchestrate", "prefix": "/orchestrate "},
     "opencode": {"automated": False, "skill_link": None, "prefix": ""},
 }
 
@@ -820,13 +819,6 @@ def manual_commands(runtime, scn, args, fixture="<FIXTURE>", outfile="<FIXTURE>/
         for i, fq in enumerate(q[1:], 2):
             cmds.append(shlex.join(["codex", "exec", "--json", "--sandbox", "workspace-write", "-C", fixture,
                                     "resume", "--last", fq]) + f" > {outfile}.turn{i}.jsonl")
-    elif runtime == "antigravity":
-        cmds.append(f"cd {shlex.quote(fixture)} && " + shlex.join(
-            ["agy", "-p", first, "--output-format", "stream-json", "--sandbox", *(["--model", m] if m else [])])
-                    + f" > {outfile}.turn1.jsonl")
-        for i, fq in enumerate(q[1:], 2):
-            cmds.append(f"cd {shlex.quote(fixture)} && " + shlex.join(
-                ["agy", "-c", "-p", fq, "--output-format", "stream-json", "--sandbox"]) + f" > {outfile}.turn{i}.jsonl")
     elif runtime == "opencode":
         cmds.append(f"cd {shlex.quote(fixture)} && " + shlex.join(
             ["opencode", "run", "--standalone", "--agent", "orchestrate", "--format", "json", first])
@@ -892,7 +884,7 @@ def main():
         return 2
 
     rt = RUNTIMES[args.runtime]
-    binary = {"claude-code": "claude", "codex": "codex", "antigravity": "agy", "opencode": "opencode"}[args.runtime]
+    binary = {"claude-code": "claude", "codex": "codex", "opencode": "opencode"}[args.runtime]
     print(f"Runtime: {args.runtime} ({'automated' if rt['automated'] else 'manual'})  "
           f"CLI: {cli_version(binary) or 'NOT FOUND'}  Orchestrator model: {args.model or '(session default)'}"
           f"  Mode: {'baseline (skill not invoked)' if args.baseline else 'skill'}")

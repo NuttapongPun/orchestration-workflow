@@ -138,7 +138,7 @@ A misspelled key, an unknown worker name, a bad regex, or a missing fixture fail
 
 ## Manual runtimes
 
-Only Claude Code is automated. For the other runtimes, `--help` does show machine-readable output (`codex exec --json`, `agy --output-format stream-json`, `opencode run --format json`), but the event format for a subagent dispatch was not verified on any of them, and neither was a way to confine their writes to the fixture the way Claude Code's permission flags do. So the runner prepares the fixtures and prints the commands, and you judge the transcript against `expected_behavior`:
+Only Claude Code is automated. For the other runtimes, `--help` does show machine-readable output (`codex exec --json`, `opencode run --format json`), but the event format for a subagent dispatch was not verified on any of them, and neither was a way to confine their writes to the fixture the way Claude Code's permission flags do. So the runner prepares the fixtures and prints the commands, and you judge the transcript against `expected_behavior`:
 
 ```bash
 python3 evals/run.py --runtime codex --scenario 03          # builds the fixture, prints the commands below with real paths
@@ -151,10 +151,6 @@ What it prints, per runtime (`<FIXTURE>` is the prepared directory):
 codex exec --json --sandbox workspace-write --ephemeral -C <FIXTURE> -m <model> -o <FIXTURE>/../transcript.last.txt '$orchestrate <query>' > <FIXTURE>/../transcript.turn1.jsonl
 codex exec --json --sandbox workspace-write -C <FIXTURE> resume --last '<followup>' > <FIXTURE>/../transcript.turn2.jsonl   # untested form, from `codex exec resume --help`
 
-# Antigravity CLI: start on the Pro model; the session must be fresh
-cd <FIXTURE> && agy -p '/orchestrate <query>' --output-format stream-json --sandbox --model <model> > <FIXTURE>/../transcript.turn1.jsonl
-cd <FIXTURE> && agy -c -p '<followup>' --output-format stream-json --sandbox > <FIXTURE>/../transcript.turn2.jsonl
-
 # OpenCode: the orchestrate primary agent, not the skill
 cd <FIXTURE> && opencode run --standalone --agent orchestrate --format json '<query>' > <FIXTURE>/../transcript.turn1.jsonl
 cd <FIXTURE> && opencode run --standalone --continue --agent orchestrate --format json '<followup>' > <FIXTURE>/../transcript.turn2.jsonl
@@ -163,7 +159,6 @@ cd <FIXTURE> && opencode run --standalone --continue --agent orchestrate --forma
 Caveats:
 
 - **Watch these runs.** Do not add `--dangerously-bypass-approvals-and-sandbox`, `--dangerously-skip-permissions`, or `--auto`.
-- **Antigravity:** how it handles a permission request in print mode is unverified.
 - **OpenCode:** the orchestrator dispatches workers in the background and ends its turn, so `opencode run` may exit before the workers report back. Judge the gate scenarios there, which end before any worker writes.
 - **Remove the fixture** with the `rm -rf` line the runner prints.
 

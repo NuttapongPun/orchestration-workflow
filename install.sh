@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install or update the orchestration workflow (shared /orchestrate skill + worker subagents)
-# into every supported runtime found on this machine: Claude Code, Codex, Antigravity CLI, OpenCode.
+# into every supported runtime found on this machine: Claude Code, Codex, OpenCode.
 #
 # One-line install / update (copy mode):
 #   curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
@@ -37,7 +37,6 @@ esac; done
 RUNTIMES=(
   "Claude Code|$HOME/.claude|$HOME/.claude/agents|claude|$HOME/.claude/skills"
   "Codex|$HOME/.codex|$HOME/.codex/agents|codex|$HOME/.codex/skills"
-  "Antigravity CLI|$HOME/.gemini/config|$HOME/.gemini/config/agents|antigravity|$HOME/.gemini/config/skills"
   "OpenCode|$HOME/.config/opencode|$HOME/.config/opencode/agents|opencode/$OC_STACK|"
 )
 
@@ -95,7 +94,7 @@ say "Mode: $MODE   Source: $SRC"
 # ------------------------------------------------------------------ OpenCode stack
 # The stack name is used as a path component, so it must be a plain directory name: not empty
 # (which would resolve to agents/opencode/ itself and install the stack dirs as agent files),
-# no slash (../antigravity would install another runtime's files), no leading dot. That also
+# no slash (../codex would install another runtime's files), no leading dot. That also
 # keeps the -d test below from being talked into anything outside agents/opencode/.
 oc_stack_name_ok() { [[ -n "$1" && "$1" != */* && "$1" != .* ]]; }
 if ! oc_stack_name_ok "$OC_STACK" || [[ ! -d "$SRC/agents/opencode/$OC_STACK" ]]; then
@@ -110,7 +109,7 @@ fi
 # ------------------------------------------------------------------ detect runtimes
 FOUND=(); MISSING=()
 for rt in "${RUNTIMES[@]}"; do IFS='|' read -r name detect _ _ _ <<<"$rt"; if [[ -d "$detect" ]]; then FOUND+=("$rt"); else MISSING+=("$name"); fi; done
-[[ ${#FOUND[@]} -eq 0 ]] && { say "No supported runtime found (Claude Code, Codex, Antigravity CLI, OpenCode). Nothing to do."; exit 1; }
+[[ ${#FOUND[@]} -eq 0 ]] && { say "No supported runtime found (Claude Code, Codex, OpenCode). Nothing to do."; exit 1; }
 say "Runtimes found: $(for rt in "${FOUND[@]}"; do IFS='|' read -r n _ <<<"$rt"; printf '%s; ' "$n"; done)"
 [[ ${#MISSING[@]} -gt 0 ]] && say "Not installed (skipped): ${MISSING[*]}"
 
@@ -233,11 +232,10 @@ cat <<EOF
 Done. Start a FRESH session and run /orchestrate (OpenCode: select the 'orchestrate' primary agent).
 
 Run the orchestrator on the strongest model you have. Suggested:
-  Claude Code      /model -> Fable 5.1 (or Opus 5.5)
-  Codex            /model -> GPT-6.1 Sol (high reasoning effort)
-  Antigravity CLI  session model -> Claude Opus 5.5 (Thinking), if offered in the selector (fresh session)
-  OpenCode         the 'orchestrate' primary agent pins its model in agents/opencode/$OC_STACK/orchestrate.md
-                   (installed stack: $OC_STACK; re-run with --opencode-stack=<name> to switch)
+  Claude Code  /model -> Fable 5.1 (or Opus 5.5)
+  Codex        /model -> GPT-6.1 Sol (high reasoning effort)
+  OpenCode     the 'orchestrate' primary agent pins its model in agents/opencode/$OC_STACK/orchestrate.md
+               (installed stack: $OC_STACK; re-run with --opencode-stack=<name> to switch)
 
 Update later: re-run this command$( [[ "$MODE" == "link" ]] && printf ', or git pull in the clone' ).
 EOF

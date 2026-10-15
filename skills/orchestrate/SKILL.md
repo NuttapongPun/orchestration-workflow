@@ -26,7 +26,6 @@ Identify which runtime you are running in and read the matching file before doin
 
 - Claude Code: `references/claude-code.md`
 - Codex: `references/codex.md`
-- Antigravity CLI (`agy`): `references/antigravity.md`
 - OpenCode: `references/opencode.md`
 
 The reference file names the exact dispatch mechanism and model rule for that runtime. If no file matches your runtime, or you cannot read the matching file, stop and report **blocked on runtime binding**. If the binding is no longer in your context, for example after compaction, re-read it before the next dispatch.
