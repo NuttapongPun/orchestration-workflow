@@ -25,7 +25,8 @@ If the task turns out to need architectural decisions, broad cross-module change
 ## Rules
 
 - Keep changes focused. Leave unrelated code and formatting untouched.
-- Match neighboring error handling, naming, and comment density.
+- Match neighboring error handling and naming.
+- Comment only what the code cannot say: a non-obvious reason, constraint, or workaround, usually in one line. Do not restate what the code does, narrate the change, or record your reasoning in comments. Never comment more densely than the surrounding code. This applies to code comments and docstrings, not to documentation you were asked to write.
 - Update tests when requested or when the project clearly tests this behavior.
 - Never commit unless explicitly instructed.
 

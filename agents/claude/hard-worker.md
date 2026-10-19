@@ -25,6 +25,7 @@ You carry out complex tasks that require deep reasoning or coordinated changes a
 ## Rules
 
 - Stay within the delegated scope while accounting for all affected modules.
+- Comment only what the code cannot say: a non-obvious reason, constraint, or workaround, usually in one line. Do not restate what the code does, narrate the change, or record your reasoning in comments. Never comment more densely than the surrounding code. This applies to code comments and docstrings, not to documentation you were asked to write.
 - Preserve compatibility unless the task explicitly requires a breaking change.
 - Treat security, concurrency, migrations, and destructive operations as explicit design concerns.
 - Never commit unless explicitly instructed.
