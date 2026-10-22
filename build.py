@@ -40,7 +40,7 @@ MODELS = {
 # bare model (for a model that has no effort variants). Model and effort are independent per
 # agent, so `investigate` can differ from the other easy-tier agents.
 # Model IDs are OpenCode's provider/model form (see `opencode models`).
-# Prices and alternatives are described in README.md, "OpenCode model stacks".
+# Prices are in README.md, "OpenCode model stacks"; alternatives are noted above OPENCODE_STACKS.
 # The six OpenCode agents: the primary orchestrator plus every worker in BODIES. Spelled out
 # here because BODIES is defined further down; the OpenCode section re-checks the two agree.
 OC_AGENTS = ["orchestrate", "investigate", "easy-worker", "hard-worker", "review", "review-hard"]
@@ -71,6 +71,14 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
         per_agent = {a: effort for a in OC_AGENTS}
     return {a: {"model": model[a], "effort": per_agent[a]} for a in OC_AGENTS}
 
+# Other free OpenCode Zen models for the `free` stack, with known problems:
+#   opencode/nemotron-3-ultra-free (reported stream timeouts during tool execution),
+#   opencode/ling-3.0-flash-fin-free (finance-tuned),
+#   opencode/muse-spark-1.2-contributor-free (same contributor terms as 1.3),
+#   opencode/big-pickle (many reports of corrupted output).
+# The DeepSeek models in cheap-openrouter offer only low/high/max effort, so the usual medium
+# rounds up to high (easy-worker, review) and orchestrate is raised from low to high on purpose.
+# Anthropic IDs use dashes in the version (claude-opus-5-5); OpenRouter IDs use dots (claude-opus-5.5).
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
     # it is unverified which effort variants OpenCode Zen offers for these, so none is named.

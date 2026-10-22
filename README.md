@@ -150,9 +150,6 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5#medium` | `openrouter/anthropic/claude-sonnet-5#medium` | `openrouter/deepseek/deepseek-v4-flash-0731#high` |
 | `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
 
-**Effort is set per entry too**, next to the model, as `low`, `medium`, `high`, or `None`. OpenCode 2 takes effort as the model's variant, so a level is written as `model: <provider/model>#<level>`, and `None` writes the bare model with no variant, which is what you want for a model that has no effort variants. The `openai` stack uses GPT-6.1 Sol at high effort for `orchestrate`, `hard-worker`, and `review-hard`; its easy agents run Luna at medium, except `investigate` at low. `openai-openrouter`, `claude`, and `claude-openrouter` use `orchestrate` low, `investigate` low, `easy-worker` medium, `hard-worker` high, `review` medium, `review-hard` high. `cheap-openrouter` differs; see its note below. The `free` stack sets `None` on all six, because it is unverified which effort variants OpenCode Zen offers for those models. Because model and effort are stored per agent, `investigate` can be given a different model or effort from the other easy-tier agents without touching them.
-
-
 Rough cost per million tokens (input / output), OpenRouter list prices in October 2026:
 
 | Model | Input | Output |
@@ -166,14 +163,8 @@ Rough cost per million tokens (input / output), OpenRouter list prices in Octobe
 
 Notes:
 
-- The `free` stack costs nothing and is the default so the workflow runs out of the box. Vendor-reported specs: MiMo V2.6 Flash has a 200K context and its family claims 73.4% on SWE-bench Verified, which is why it takes the hard tier; Muse Spark 1.3 has a 1M context, useful for an orchestrator that accumulates worker reports; Nemotron 3.5 Lightning has a 262K context and is the fastest of the three (around 297 tok/s per Artificial Analysis) but the weakest reasoner, so it takes the easy tier. Expect weaker routing judgment than the paid stacks give you, and read the review verdicts yourself.
-- Other free OpenCode Zen models you can swap into any agent of the `free` stack in `OPENCODE_STACKS`, with their known problems: `opencode/nemotron-3-ultra-free` (reported stream timeouts during tool execution), `opencode/ling-3.0-flash-fin-free` (finance-tuned), `opencode/muse-spark-1.2-contributor-free` (same contributor terms as 1.3), `opencode/big-pickle` (many reports of corrupted output).
-- The Claude stack mirrors what the Claude Code runtime uses natively (Opus 5.5 as orchestrator and hard tier, Sonnet easy). Pick `claude` with an Anthropic key, or `claude-openrouter` to route it through OpenRouter.
-- The cheap stack keeps the same three-role shape on DeepSeek alone: V4 Pro 0813 for `orchestrate`, `hard-worker`, and `review-hard`, V4 Flash 0731 for the easy tier. A session costs roughly $0.94 against roughly $2.60 for this stack's previous Kimi K3 / GLM 5.3 line-up. Expect weaker routing judgment from the orchestrator; the review step matters more there.
-- The DeepSeek prices above are its standard rate; DeepSeek doubles its price during peak hours.
-- These DeepSeek models offer only `low`, `high`, and `max` effort, with no `medium`, so the cheap stack rounds the usual medium up to `high` (`easy-worker`, `review`). `orchestrate` is raised from its usual `low` to `high` on purpose, for planning quality; `investigate` stays at `low`.
-- Anthropic's direct IDs use dashes in the version (`claude-opus-5-5`); OpenRouter's use dots (`claude-opus-5.5`). Both are correct for their provider.
-- All stacks are generated, so switching is an install-time choice, not a rebuild: re-run the installer with a different `--opencode-stack=<name>` and start a fresh OpenCode session. To add a stack or change one agent's model or effort, edit `OPENCODE_STACKS` in `build.py`, run `python3 build.py`, then re-install with the flag. The `oc_stack()` helper there fills the six entries from the usual orchestrator/hard/easy trio; override a single agent afterwards when you want it to differ. `build.py` refuses to build a stack that is missing an agent, names an agent that does not exist, or uses an effort other than `low`, `medium`, `high`, or `None`.
+- `free` is the default and costs nothing, but its models are weaker: read the review verdicts yourself.
+- To switch stacks, re-run the installer with another `--opencode-stack=<name>` and start a fresh session.
 
 ## Customize
 
@@ -205,30 +196,9 @@ After changing the skill or its plan gate, run `python3 evals/run.py --dry-run` 
 
 ## Runtime notes
 
-- **Codex** custom agents need Codex 0.153 or newer. An agent file sets the model, reasoning effort, and instructions; Codex ignores any `sandbox_mode` or approval setting in it. Every worker inherits the session's sandbox and approval settings: in `workspace-write` (the default) any worker, `investigate` included, can write in the workspace; in a `read-only` session reviewers cannot run tests that write caches or build output; under `--yolo` or full access every worker has full access. Run orchestration sessions in `workspace-write`. Web search and shell network access are session settings too (see [Codex web search](#codex-web-search)).
-- **OpenCode** review workers have full shell so tests and checks can run; only their edit tools are denied, so they can still write through the shell. `investigate` has its edit tools denied and a deny-by-default shell: an allowlist of read-only inspection commands (including `ls`, `cat`, `grep`, `rg`, `stat`, `which`, `command -v`, `git log`/`diff`/`show`/`status`, per-tool `--version` checks, and the read subcommands of `brew`, `mise`, and `uv`; the full list is `OC_READ_CMDS` in `build.py`), with commands that print the environment left off. On top of that, deny rules block flags and paths that write, run a chosen program, or expose secrets (output redirects, `find -exec`/`-delete`, `rg --pre`, `.env` paths, `/proc/*/environ`). The deny rules are best-effort: they match the command text before the shell expands it, and a redirect on a pipeline or group (`cat a | head > b`) is never checked, so `investigate` can still write a file that way; a determined or prompt-injected model can get past them, and a recursive `grep` or `rg` can still read `.env` contents. The comments above `OC_READ_CMDS` in `build.py` list the known gaps.
-- **Claude Code** reads `~/.claude/skills`, not `~/.agents/skills` directly; the symlink handles that. Workers pin `model` and `effort` in frontmatter, and the skill still asks the orchestrator to set `model` explicitly on every dispatch.
-- **OpenCode** 2.0 or newer is required: the agent files use its format (an ordered `permissions` rule list and `model: <provider/model>#<variant>`), which OpenCode 1 does not read. On macOS, `brew install anomalyco/tap/opencode-v2`; it conflicts with the v1 `opencode` formula, so uninstall that first.
-- **OpenCode** is the only runtime with a real primary agent, so the orchestrator's "never edit" rule is enforced by permissions there. In Claude Code and Codex it is a prompt rule.
-- **OpenCode's orchestrator dispatches every worker in the background** (`background: true` on the `subagent` tool), then ends its turn. You can keep talking to it while workers run; each result arrives as a message and the orchestrator picks the workflow up from there. New work that touches files a running worker writes waits for that worker.
-- **OpenCode's default `free` stack needs no provider login.** Its agents reference OpenCode Zen's free models (`opencode/muse-spark-1.3-contributor-free`, `opencode/mimo-v2.6-flash-free`, `opencode/nemotron-3.5-lightning-free`). A probe on a machine whose `opencode auth list` held only OpenRouter and OpenAI credentials, with nothing for OpenCode Zen, answered normally:
-
-  ```bash
-  opencode run --model opencode/nemotron-3.5-lightning-free "Reply with exactly the word OK"
-  # > build · nemotron-3.5-lightning-free
-  # OK
-  ```
-
-  If your install does ask for a credential, run `opencode auth login` and pick OpenCode Zen. Free models are rate-limited and can be withdrawn; read the contributor-terms warning under "OpenCode model stacks" before pointing this stack at private code.
-- **If you pick the `openai` stack, connect the OpenAI provider first.** Its orchestrator, `hard-worker`, and `review-hard` use `openai/gpt-6.1-sol#high`; the easy tier uses `openai/gpt-6-luna` (`#medium`, and `#low` for `investigate`). Link the provider once, either with a ChatGPT login or an API key:
-
-  ```bash
-  opencode auth login      # choose OpenAI, then ChatGPT login or API key
-  opencode auth list       # should show "OpenAI"
-  ```
-
-  The same applies to the other stacks: `claude` needs an Anthropic key, the `*-openrouter` stacks need OpenRouter. To switch, re-run the installer with `--opencode-stack=<name>` (see "OpenCode model stacks").
-- Reviewers run at the tier of the work they review. The orchestrator's one non-delegable job is to judge the verdict and confirm the tests actually ran.
+- **Codex** needs 0.153 or newer. Run sessions in `workspace-write` (the default). Workers inherit your session's sandbox, so read-only workers are read-only by prompt only. See [Codex web search](#codex-web-search) for the browsing setting.
+- **OpenCode** needs 2.0 or newer: on macOS, `brew install anomalyco/tap/opencode-v2` (it conflicts with the v1 `opencode` formula, so uninstall that first). Its read-only rules for `investigate` and the reviewers are best-effort; a prompt-injected model can get past them.
+- **Providers (OpenCode):** `free` needs no login; if your install asks for one, run `opencode auth login` and pick OpenCode Zen. Other stacks need their provider linked first with `opencode auth login`: `openai` needs OpenAI, `claude` needs Anthropic, `*-openrouter` needs OpenRouter.
 
 ## Companion skills
 
