@@ -232,25 +232,39 @@ After changing the skill or its plan gate, run `python3 evals/run.py --dry-run` 
 
 ## Companion skills
 
-These general-purpose skills pair well with this workflow. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/` and link into every agent it detects:
+These skills pair well with this workflow. Workers load an installed skill when it matches the task, and the workflow works the same without any of them. Most install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, which links them into every agent it detects.
+
+**[mattpocock/skills](https://github.com/mattpocock/skills)**: engineering and productivity skills such as TDD, bug diagnosis, and codebase design. Interactive: pick only the ones you want.
 
 ```bash
-npx skills add mattpocock/skills --global          # interactive: pick only the ones you want
+npx skills add mattpocock/skills --global
+```
+
+**[playwright-cli](https://github.com/microsoft/playwright-cli)**: lets agents drive a browser, test web pages, and run Playwright tests.
+
+```bash
 npx skills add microsoft/playwright-cli --global
+```
+
+**[defuddle](https://github.com/kepano/obsidian-skills)**: extracts clean Markdown from web pages. One skill from Kepano's Obsidian pack.
+
+```bash
 npx skills add kepano/obsidian-skills --global --skill defuddle
 ```
 
-`npx skills update` refreshes them. `~/.agents/.skill-lock.json` records the exact source and commit of each one.
-
-Optional, for UI and code style. Workers load an installed skill when it matches the task, and the workflow works the same without any of these:
+**[frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)**: Anthropic's guidance for UI that avoids generic, AI-looking defaults.
 
 ```bash
-npx impeccable install   # Impeccable: run from a project root; it asks which agents, and project or global
+npx skills add anthropics/skills --global --skill frontend-design
 ```
 
-- [frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), Anthropic's, ships in the `example-skills` plugin. In Claude Code: `/plugin marketplace add anthropics/skills`, then `/plugin install example-skills@anthropic-agent-skills`.
-- [Ponytail](https://github.com/DietrichGebert/ponytail) installs as a plugin. In Claude Code: `/plugin marketplace add DietrichGebert/ponytail`, then `/plugin install ponytail@ponytail`. In Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugin add ponytail@ponytail`, then trust its hooks in `/hooks`.
-- [Impeccable](https://github.com/pbakaus/impeccable) documents its other install routes.
+**[Impeccable](https://github.com/pbakaus/impeccable)**: frontend design guidance, `/impeccable` review commands, and a detector for AI-generated design flaws. Run it from a project root; it asks which agents to install for, and whether to install for the project or globally.
+
+```bash
+npx impeccable install
+```
+
+`npx skills update` refreshes the skills installed through the `skills` CLI. `~/.agents/.skill-lock.json` records the exact source and commit of each one.
 
 Workers read a project's `DESIGN.md` before UI work. To give agents your visual identity in a structured form, see Google's [DESIGN.md format](https://github.com/google-labs-code/design.md).
 
