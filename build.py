@@ -85,10 +85,10 @@ OPENCODE_STACKS = {
     # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
     "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
     "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6-luna", effort={"orchestrate": "high"}),
-    "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
-    "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5"),
-    "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5", effort={"orchestrate": "high"}),
-    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4-flash-0731", effort={"orchestrate": "high", "easy-worker": "high", "review": "high"}),
+    "openai-openrouter": oc_stack("openrouter/openai/gpt-6.1-sol",            "openrouter/openai/gpt-6.1-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
+    "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5"),
+    "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
+    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4.1-flash-1017", effort={"orchestrate": "high", "easy-worker": "high", "review": "high"}),
 }
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", None)

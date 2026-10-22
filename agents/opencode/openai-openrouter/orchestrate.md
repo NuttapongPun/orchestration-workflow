@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing
 mode: primary
-model: openrouter/openai/gpt-6-sol#high
+model: openrouter/openai/gpt-6.1-sol#high
 color: "#a78bfa"
 permissions:
   - { action: edit, resource: "*", effect: deny }

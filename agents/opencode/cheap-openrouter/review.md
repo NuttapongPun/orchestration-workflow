@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for easy-tier work. Verifies changes against requirements, hunts for defects, checks the test evidence and runs what is missing, returns a verdict.
 mode: subagent
-model: openrouter/deepseek/deepseek-v4-flash-0731#high
+model: openrouter/deepseek/deepseek-v4.1-flash-1017#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: deny }

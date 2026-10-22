@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker for easy-tier work. Verifies changes against requirements, hunts for defects, checks the test evidence and runs what is missing, returns a verdict.
 mode: subagent
-model: anthropic/claude-sonnet-5#medium
+model: anthropic/claude-sonnet-5-5#medium
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: deny }
