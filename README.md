@@ -110,7 +110,7 @@ The orchestrator role is played by whatever model your session runs, so pick the
 |---|---|---|
 | Claude Code | Fable 5.1, or Opus 5.5 | `/model` |
 | Codex | GPT-6.1 Sol (high reasoning effort) | Select GPT-6.1 Sol in the active Codex session with `/model` |
-| OpenCode | Muse Spark 1.3 on the default `free` stack, which sets no effort; `openai` and `cheap-openrouter` run their orchestrator at high effort, the other paid stacks at low | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
+| OpenCode | DeepSeek V4.1 Flash on the default `free` stack, which sets no effort; `claude` runs its orchestrator at low effort, the other paid stacks at high | pinned in the `orchestrate` primary agent; each stack sets its own `orchestrate` model and effort in `OPENCODE_STACKS` in `build.py`, and `--opencode-stack=<name>` chooses which stack is installed |
 
 Give this role the best judgment you can afford. Put a provider's cheapest tier in the orchestrator's seat and the workflow loses its point: it routes tasks to the wrong worker and accepts weak review verdicts. That is a statement about the role, not about any model name. A fast, cheap model is exactly what you want doing the work underneath, which is why the default `free` stack runs MiMo V2.6 Flash as its hard worker and Nemotron 3.5 Lightning as its easy one.
 
@@ -143,7 +143,7 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
-| `orchestrate` | `opencode/muse-spark-1.3-contributor-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#low` | `anthropic/claude-opus-5-5#low` | `openrouter/anthropic/claude-opus-5.5#low` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `orchestrate` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#high` | `anthropic/claude-opus-5-5#low` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
 | `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5#low` | `openrouter/anthropic/claude-sonnet-5#low` | `openrouter/deepseek/deepseek-v4-flash-0731#low` |
 | `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5#medium` | `openrouter/anthropic/claude-sonnet-5#medium` | `openrouter/deepseek/deepseek-v4-flash-0731#high` |
 | `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
@@ -154,12 +154,12 @@ Rough cost per million tokens (input / output), OpenRouter list prices in Octobe
 
 | Model | Input | Output |
 |---|---|---|
-| Muse Spark 1.3 (contributor)† / MiMo V2.6 Flash / Nemotron 3.5 Lightning, free on OpenCode Zen | $0 | $0 |
+| DeepSeek V4.1 Flash / MiMo V2.6 Flash† / Nemotron 3.5 Lightning†, free on OpenCode Zen | $0 | $0 |
 | GPT-6.1 Sol / GPT-6 Luna | $2 / $0.10 | $10 / $0.50 |
 | Claude Opus 5.5 / Sonnet 5 | $4 / $2 | $20 / $10 |
 | DeepSeek V4 Pro 0813 / V4 Flash 0731 | $0.66 / $0.14 | $1.98 / $0.28 |
 
-† **Contributor model.** `muse-spark-1.3-contributor-free` is free because it is offered on contributor terms: Meta may use the prompts and completions you send it to train future models. Everything the orchestrator sees, including file paths, code, and worker reports, goes through it. Do not use the `free` stack on confidential code; install `--opencode-stack=openai` or `--opencode-stack=claude` instead.
+† **Free-tier terms.** MiMo V2.6 Flash (`hard-worker`, `review-hard`) is free on terms that let its provider use collected data to improve the model, and Nemotron 3.5 Lightning (`investigate`, `easy-worker`, `review`) is for trial use only, with no personal or confidential data. These workers read your files and code; only the orchestrator's provider promises zero retention. Do not use the `free` stack on confidential code; install `--opencode-stack=openai` or `--opencode-stack=claude` instead.
 
 Notes:
 

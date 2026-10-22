@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing
 mode: primary
-model: opencode/muse-spark-1.3-contributor-free
+model: opencode/deepseek-v4.1-flash-free
 color: "#a78bfa"
 permissions:
   - { action: edit, resource: "*", effect: deny }

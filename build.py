@@ -72,9 +72,10 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
     return {a: {"model": model[a], "effort": per_agent[a]} for a in OC_AGENTS}
 
 # Other free OpenCode Zen models for the `free` stack, with known problems:
-#   opencode/nemotron-3-ultra-free (reported stream timeouts during tool execution),
+#   opencode/beam-free (passed the orchestration probe, but its provider retains data for 30 days),
+#   opencode/nemotron-3-ultra-free (reported stream timeouts during tool execution; trial-only terms),
+#   opencode/glm-5.3-flash-free (chose the wrong review tier in an orchestration probe),
 #   opencode/ling-3.0-flash-fin-free (finance-tuned),
-#   opencode/muse-spark-1.2-contributor-free (same contributor terms as 1.3),
 #   opencode/big-pickle (many reports of corrupted output).
 # The DeepSeek models in cheap-openrouter offer only low/high/max effort, so the usual medium
 # rounds up to high (easy-worker, review) and orchestrate is raised from low to high on purpose.
@@ -82,11 +83,11 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
     # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
-    "free":              oc_stack("opencode/muse-spark-1.3-contributor-free", "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
+    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
     "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6-luna", effort={"orchestrate": "high"}),
-    "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna"),
+    "openai-openrouter": oc_stack("openrouter/openai/gpt-6-sol",            "openrouter/openai/gpt-6-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
     "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5"),
-    "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5"),
+    "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5", effort={"orchestrate": "high"}),
     "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4-flash-0731", effort={"orchestrate": "high", "easy-worker": "high", "review": "high"}),
 }
 
@@ -504,7 +505,7 @@ for n, body in BODIES.items():
 # Read-only inspection for `investigate`. Commands whose output is the environment (bare `env`,
 # `printenv`, `set`, `export`, `mise env`, `mise doctor`, which prints MISE_* values) are left out on
 # purpose: they would put every API key in the model's context, and some stacks send that context to
-# contributor models that may train on it.
+# free models whose terms do not protect it.
 # `<tool> --version` is listed per tool, not as "* --version": `sh -c '<cmd>' --version` would match.
 OC_READ_CMDS = [
     "ls *", "find *", "cat *", "head *", "tail *", "wc *", "grep *", "rg *", "stat *",

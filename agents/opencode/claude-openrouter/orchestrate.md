@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies results through review before finishing
 mode: primary
-model: openrouter/anthropic/claude-opus-5.5#low
+model: openrouter/anthropic/claude-opus-5.5#high
 color: "#a78bfa"
 permissions:
   - { action: edit, resource: "*", effect: deny }
