@@ -40,7 +40,7 @@ Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `
 - **OpenCode** denies their edit tools. `investigate` also gets a shell limited to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes); `review` and `review-hard` get a full shell so they can run tests.
 - **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is a prompt rule for all of them. Run Codex in the `workspace-write` sandbox (the default): reviewers need it to run tests.
 
-`review` and `review-hard` must run tests, so every runtime gives them a shell, and through it they can still write. Staying read-only there is a prompt rule.
+`review` and `review-hard` cite the worker's test output and re-run or add checks where it falls short, so every runtime gives them a shell, and through it they can still write. Staying read-only there is a prompt rule.
 
 ## Install
 
@@ -241,6 +241,18 @@ npx skills add kepano/obsidian-skills --global --skill defuddle
 ```
 
 `npx skills update` refreshes them. `~/.agents/.skill-lock.json` records the exact source and commit of each one.
+
+Optional, for UI and code style. Workers load an installed skill when it matches the task, and the workflow works the same without any of these:
+
+```bash
+npx impeccable install   # Impeccable: run from a project root; it asks which agents, and project or global
+```
+
+- [frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), Anthropic's, ships in the `example-skills` plugin. In Claude Code: `/plugin marketplace add anthropics/skills`, then `/plugin install example-skills@anthropic-agent-skills`.
+- [Ponytail](https://github.com/DietrichGebert/ponytail) installs as a plugin. In Claude Code: `/plugin marketplace add DietrichGebert/ponytail`, then `/plugin install ponytail@ponytail`. In Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugin add ponytail@ponytail`, then trust its hooks in `/hooks`.
+- [Impeccable](https://github.com/pbakaus/impeccable) documents its other install routes.
+
+Workers read a project's `DESIGN.md` before UI work. To give agents your visual identity in a structured form, see Google's [DESIGN.md format](https://github.com/google-labs-code/design.md).
 
 ## Support
 

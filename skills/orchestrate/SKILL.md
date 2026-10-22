@@ -89,9 +89,10 @@ A worker starts blind. It has none of this conversation. Every brief carries:
 - absolute paths to every input file, including the ones the commander named and the ones you judge the worker will need, plus facts already gathered by `investigate`
 - constraints, repository instructions, and conventions in force
 - permitted mutation scope and shared-state boundaries
+- a skill to load, only when it matches the task and you see it listed in your own session
 - what to return: conclusion, evidence, files changed, commands run with their output, unresolved risks
 
-For review tasks, provide the raw artifacts and neutral criteria, not the implementer's conclusions.
+For review tasks, provide the raw artifacts and neutral criteria, not the implementer's conclusions. The worker's verification evidence, the commands it ran and their verbatim output, is a raw artifact; its claims about what that output shows are conclusions.
 
 ## 8. Dispatch and adapt
 
@@ -101,15 +102,15 @@ Adapt from evidence: reassign when a different worker is clearly better suited, 
 
 ## 9. Review and judge
 
-After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, and the list of changed files.
+After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, and the worker's verification evidence.
 
 Treat every worker summary and every review verdict as a claim. Your job is to judge it:
 
 - read the verdict against the acceptance criteria
-- confirm the checks actually ran by looking at the command output the reviewer returned
+- confirm the checks actually ran against the final change, by looking at the command output the review returned, whether the reviewer ran the command or cited the worker's output
 - when the verdict and the evidence disagree, re-task the reviewer or the worker with the specific gap named
 
-If review finds real problems, send a fix task to the responsible worker with the reviewer's specific findings, then re-review. Stop after three rounds and report what remains. Start dependent waves only after their inputs are verified sufficiently for use.
+If review finds defects, send a fix task to the responsible worker with the reviewer's specific findings, then re-review: the brief lists the files the fix touched, the earlier findings, and the fix's verification evidence, not the whole change again. Suggestions alone do not start a fix round; when one runs, include the outstanding suggestions in the fix task, and otherwise list them in the report. Stop after three rounds and report what remains. Start dependent waves only after their inputs are verified sufficiently for use.
 
 ## 10. Report once
 
