@@ -40,7 +40,7 @@ Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `
 - **OpenCode** denies their edit tools. `investigate` also gets a shell limited to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes); `review` and `review-hard` get a full shell so they can run tests.
 - **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is a prompt rule for all of them. Run Codex in the `workspace-write` sandbox (the default): reviewers need it to run tests.
 
-`review` and `review-hard` cite the worker's test output and re-run or add checks where it falls short, so every runtime gives them a shell, and through it they can still write. Staying read-only there is a prompt rule.
+`review` and `review-hard` cite the worker's test output and re-run or add checks where it falls short, so every runtime gives them a shell, and through it they can still write. Staying read-only there is a prompt rule. Workers and reviewers check in a real browser only for flows the brief names, new pages, major layout or flow changes, and complex flows.
 
 ## Install
 

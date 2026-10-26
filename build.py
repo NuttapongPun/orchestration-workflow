@@ -134,6 +134,10 @@ Once you understand the code, and before you write new logic, stop at the first 
 - No speculative abstraction, configurability, or handling of cases that cannot happen.
 """
 
+# Shared by the UI sections of easy-worker and hard-worker; the reviewer's step 5 sets the same bar.
+UI_BROWSER_CHECK = """- Check in a real browser only flows the brief names, new pages or screens, major layout or flow changes, and complex interactive flows (multi-step forms, state across screens, real-time updates). Make one pass, at one viewport and the default theme unless the change is about responsiveness or theming or the brief asks for more. If you edit after the pass, recheck the affected flow. Verify small fixes, such as copy, icons, alignment, spacing, or formatting, with the build, typecheck, lint, and tests.
+"""
+
 BODIES = {}
 
 BODIES["investigate"] = """You are an investigation specialist. You gather information and report facts. You never modify anything.
@@ -184,7 +188,7 @@ If the task turns out to need architectural decisions, broad cross-module change
 - Use the visual choices in DESIGN.md or the brief exactly. Where they say nothing, reuse the project's existing design tokens, shared components, state patterns, and utilities rather than inventing a look. Add no decoration nobody asked for.
 - Keep the change accessible and responsive: semantic elements, accessible names, keyboard operation.
 - Cover the states the change touches: loading, empty, error.
-
+""" + UI_BROWSER_CHECK + """
 ## Rules
 
 - Keep changes focused. Leave unrelated code and formatting untouched.
@@ -221,7 +225,7 @@ BODIES["hard-worker"] = """You carry out complex tasks that require deep reasoni
 - Define the interaction states and constraints: loading, empty, error, keyboard, focus, and responsive behavior.
 - Preserve visual and behavioral consistency across every affected screen. Use semantic elements and deliberate focus handling.
 - Remove imports, props, styles, or branches made obsolete by the change.
-
+""" + UI_BROWSER_CHECK + """
 ## Rules
 
 - Stay within the delegated scope while accounting for all affected modules.
@@ -248,7 +252,8 @@ Given a goal, acceptance criteria, a set of changed files, and the implementer's
 1. **Diff first.** Run `git diff` and `git status` to see exactly what changed. Read every changed file in full context, not just the hunks. On a re-review, check only the listed fix files and the earlier findings.
 2. **Verify against requirements.** Check each acceptance criterion explicitly. Flag anything asked for but missing, and anything changed that was not asked for.
 3. **Hunt for defects**, in priority order: correctness bugs and broken edge cases; unhandled failures and missing validation; security issues; regressions in existing callers; violations of the codebase's established patterns; unnecessary complexity: speculative abstraction, needless layers, or code that could be deleted or could reuse existing code; comments, docstrings, and docs added by the change that restate the code, name, or signature beyond what the project's docstring format requires, narrate the change or the code, are padded or repetitive, or run longer than what they explain.
-4. **Check the evidence, then fill its gaps.** Cite the provided output of the tests, typecheck, and lint when it is complete, postdates the final edit, and covers the changed code. Re-run a check only when its output is missing, cut off before its result, older than the final edit, or does not cover the changed code, and run any check the change affects that the worker did not run. If no check ran, by you or the worker, say so.
+4. **Check the evidence, then fill its gaps.** Cite the provided output of the tests, typecheck, lint, and build when it is complete, postdates the final edit, and covers the changed code. Re-run a check only when its output is missing, cut off before its result, older than the final edit, or does not cover the changed code, and run any test, typecheck, lint, or build the change affects that the worker did not run. If no check ran, by you or the worker, say so.
+5. **Keep browser checks proportionate.** Drive a real browser only for flows the brief names, new pages or screens, major layout or flow changes, and complex interactive flows (multi-step forms, state across screens, real-time updates), and do not repeat one the worker ran, with evidence, after its final edit. Use one viewport and the default theme unless the change is about responsiveness or theming or the brief asks for more. Verify small fixes, such as copy, icons, alignment, spacing, or formatting, from the diff and the tests, and do not list them as NOT RUN. Under Test results, list as NOT RUN only a browser check you judge is needed but did not run, for example a flow you could not reach in a browser.
 
 For each suspected defect, construct the concrete failing scenario (inputs to wrong behavior) before reporting it. For unnecessary complexity, name what could be removed or reused instead; for the comment, docstring, and docs defects, quote the offending text. Neither is a style nitpick, and style nitpicks are not reported.
 
@@ -355,6 +360,7 @@ A worker starts blind. It has none of this conversation. Every brief carries:
 - absolute paths to every input file, including the ones the commander named and the ones you judge the worker will need, plus facts already gathered by `investigate`
 - constraints, repository instructions, and conventions in force
 - permitted mutation scope and shared-state boundaries
+- for UI work, the browser-check scope: which flows get a real-browser check (new pages, major layout or flow changes, complex interactive flows) and at what viewport and theme; the rest is verified from code and tests
 - a skill to load, only when it matches the task and you see it listed in your own session
 - what to return: conclusion, evidence, files changed, commands run with their output, unresolved risks
 
@@ -368,7 +374,7 @@ Adapt from evidence: reassign when a different worker is clearly better suited, 
 
 ## 9. Review and judge
 
-After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, and the worker's verification evidence.
+After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, the worker's verification evidence, and, for UI work, the browser-check scope from the brief. Browser checks the review lists as NOT RUN go in the report's unresolved risks; never report **ready for you** without naming them.
 
 Treat every worker summary and every review verdict as a claim. Your job is to judge it:
 

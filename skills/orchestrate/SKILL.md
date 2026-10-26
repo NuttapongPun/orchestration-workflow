@@ -89,6 +89,7 @@ A worker starts blind. It has none of this conversation. Every brief carries:
 - absolute paths to every input file, including the ones the commander named and the ones you judge the worker will need, plus facts already gathered by `investigate`
 - constraints, repository instructions, and conventions in force
 - permitted mutation scope and shared-state boundaries
+- for UI work, the browser-check scope: which flows get a real-browser check (new pages, major layout or flow changes, complex interactive flows) and at what viewport and theme; the rest is verified from code and tests
 - a skill to load, only when it matches the task and you see it listed in your own session
 - what to return: conclusion, evidence, files changed, commands run with their output, unresolved risks
 
@@ -102,7 +103,7 @@ Adapt from evidence: reassign when a different worker is clearly better suited, 
 
 ## 9. Review and judge
 
-After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, and the worker's verification evidence.
+After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, the worker's verification evidence, and, for UI work, the browser-check scope from the brief. Browser checks the review lists as NOT RUN go in the report's unresolved risks; never report **ready for you** without naming them.
 
 Treat every worker summary and every review verdict as a claim. Your job is to judge it:
 

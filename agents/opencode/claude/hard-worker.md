@@ -45,6 +45,7 @@ Once you understand the code, and before you write new logic, stop at the first 
 - Define the interaction states and constraints: loading, empty, error, keyboard, focus, and responsive behavior.
 - Preserve visual and behavioral consistency across every affected screen. Use semantic elements and deliberate focus handling.
 - Remove imports, props, styles, or branches made obsolete by the change.
+- Check in a real browser only flows the brief names, new pages or screens, major layout or flow changes, and complex interactive flows (multi-step forms, state across screens, real-time updates). Make one pass, at one viewport and the default theme unless the change is about responsiveness or theming or the brief asks for more. If you edit after the pass, recheck the affected flow. Verify small fixes, such as copy, icons, alignment, spacing, or formatting, with the build, typecheck, lint, and tests.
 
 ## Rules
 
