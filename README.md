@@ -227,7 +227,7 @@ The workflow works without any of these. Install only the ones you use. The orch
 
 ### For workers
 
-Workers load one of these when it matches their task. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, and the CLI links them into every agent it detects. `npx skills update` refreshes them, and `~/.agents/.skill-lock.json` records the source and commit of each one.
+Workers load one of these when it matches their task. The orchestrator also names `frontend-design`, `tdd`, `diagnosing-bugs`, and `defuddle` in a worker's brief when the task fits and the skill is installed. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, and the CLI links them into every agent it detects. `npx skills update` refreshes them, and `~/.agents/.skill-lock.json` records the source and commit of each one.
 
 **`tdd` and `diagnosing-bugs`** from [mattpocock/skills](https://github.com/mattpocock/skills): test-first development, and a diagnosis loop for hard bugs and performance regressions. Install these two rather than the whole pack, which is built for working with you directly.
 

@@ -110,7 +110,11 @@ A worker starts blind. It has none of this conversation. Every brief carries:
 - constraints, repository instructions, and conventions in force
 - permitted mutation scope and shared-state boundaries
 - for UI work, the browser-check scope: which flows get a real-browser check (new pages, major layout or flow changes, complex interactive flows) and at what viewport and theme; the rest is verified from code and tests
-- a skill to load, only when it matches the task and you see it listed in your own session
+- a skill to load, only when it matches the task and you see it listed in your own session. Prefer these when listed; when one is missing, brief without it:
+  - UI work: `frontend-design`
+  - test-first work: `tdd`
+  - hard bugs and performance regressions: `diagnosing-bugs`
+  - reading web pages: `defuddle`
 - what to return: conclusion, evidence, files changed, commands run with their output, unresolved risks
 
 For review tasks, provide the raw artifacts and neutral criteria, not the implementer's conclusions. The worker's verification evidence, the commands it ran and their verbatim output, is a raw artifact; its claims about what that output shows are conclusions.
