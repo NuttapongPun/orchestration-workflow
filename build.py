@@ -529,6 +529,14 @@ OC_READ_CMDS = [
     "ls *", "find *", "cat *", "head *", "tail *", "wc *", "grep *", "rg *", "stat *",
     "readlink *", "realpath *", "pwd", "uname *", "sw_vers *", "which *", "command -v *", "type *",
     "git log *", "git show *", "git diff *", "git blame *", "git status *",
+    "git stash list *", "git stash show *", "git rev-parse *", "git ls-files *", "git ls-tree *",
+    "git cat-file *", "git describe *", "git shortlog *", "git rev-list *", "git merge-base *",
+    "git reflog", "git reflog show *", "git worktree list *", "git remote", "git remote -v",
+    "git remote get-url *",
+    # Bare `git branch`/`git tag` and `-a`/`-r` list, but add a name and they create or delete. With
+    # `--list`/`-l` git rejects any write mode, so only those forms take further arguments.
+    "git branch", "git branch -a", "git branch -r", "git branch -v", "git branch -vv", "git branch -av",
+    "git branch --show-current", "git branch --list *", "git tag", "git tag -l *", "git tag --list *",
     *[f"{t} --version" for t in ["brew", "mise", "uv", "git", "node", "npm", "pnpm", "yarn", "bun", "deno",
                                   "python", "python3", "ruby", "cargo", "rustc"]], "go version",
     "brew list *", "brew ls *", "brew info *", "brew config *", "brew leaves *", "brew deps *", "brew uses *",
