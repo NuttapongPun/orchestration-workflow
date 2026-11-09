@@ -1,7 +1,7 @@
 # Codex binding
 
 - **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
-- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`, hard tier is `gpt-6.1-sol` at high reasoning effort; `review` is hard tier. If either override is not callable in the live runtime, report blocked on model availability. Never substitute another model.
+- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`. Hard tier is `gpt-6.1-sol` at high reasoning effort, except `hard-worker`, which runs `gpt-6.1-terra` at high reasoning effort; `review` is hard tier and runs `gpt-6.1-sol`. If any of these models is not callable in the live runtime, report blocked on model availability. Never substitute another model.
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`. The wave's results come back together.
 - **Sandbox:** workers inherit the session's sandbox and approval settings; a worker file cannot change them. Read-only workers are read-only by their instructions only, so tell `investigate` and `review` in the brief not to modify files. The commander should run the session in `workspace-write` (the default): reviewers re-run or add checks when the worker's output falls short, which a `read-only` session blocks when they write caches or build output.

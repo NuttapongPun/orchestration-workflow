@@ -1,7 +1,7 @@
 ---
 description: Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content.
 mode: subagent
-model: opencode/nemotron-3.5-lightning-free
+model: opencode/glm-5.3-flash-free
 color: "#22c55e"
 permissions:
   - { action: edit, resource: "*", effect: allow }

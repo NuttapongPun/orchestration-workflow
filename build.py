@@ -29,6 +29,12 @@ MODELS = {
     "claude":      {"easy": "sonnet",      "hard": "opus"},
     "codex":       {"easy": "gpt-6-luna",  "hard": "gpt-6.1-sol"},
 }
+# Per-agent exceptions to the tier model. Codex's hard-worker runs GPT-6.1 Terra (half Sol's price,
+# faster); review stays on Sol, so the final check keeps the strongest model.
+MODEL_OVERRIDES = {"codex": {"hard-worker": "gpt-6.1-terra"}}
+
+def model_for(runtime, agent):
+    return MODEL_OVERRIDES.get(runtime, {}).get(agent, MODELS[runtime][TIER[agent]])
 
 # ------------------------------------------------------------------ OpenCode model stacks
 # Every stack below is generated into its own directory, agents/opencode/<stack>/, and the
@@ -72,25 +78,32 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
         per_agent = {a: effort for a in OC_AGENTS}
     return {a: {"model": model[a], "effort": per_agent[a]} for a in OC_AGENTS}
 
-# Other free OpenCode Zen models for the `free` stack, with known problems:
+# The `free` stack uses only the Zen models whose provider keeps zero retention and does not
+# train on your data (DeepSeek V4.1 Flash, GLM-5.3-Flash). Other free Zen models, with known problems:
+#   opencode/mimo-v2.6-flash-free, opencode/nemotron-3.5-lightning-free, opencode/nemotron-3.5-super-vl-free,
+#   opencode/nemotron-3-ultra-free, opencode/flint-40b-free (provider uses your data to improve the model),
+#   opencode/inkling-2-small-free (provider retains your data and may train on it),
 #   opencode/beam-free (passed the orchestration probe, but its provider retains data for 30 days),
-#   opencode/nemotron-3-ultra-free (reported stream timeouts during tool execution; trial-only terms),
-#   opencode/glm-5.3-flash-free (chose the wrong review tier in an orchestration probe),
-#   opencode/ling-3.0-flash-fin-free (finance-tuned),
-#   opencode/big-pickle (many reports of corrupted output).
+#   opencode/big-pickle, opencode/iceman-free, opencode/crouton-alpha-free (unnamed stealth models
+#   that use your data; Big Pickle also has many reports of corrupted output).
 # The DeepSeek models in cheap-openrouter offer only low/high/max effort, so the usual medium
 # rounds up to high (easy-worker) and orchestrate is raised from low to high on purpose.
+# MiMo V2.6 Pro on OpenRouter offers no effort levels, so hard-worker and review carry None.
 # Anthropic IDs use dashes in the version (claude-opus-5-5); OpenRouter IDs use dots (claude-opus-5.5).
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
     # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
-    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/mimo-v2.6-flash-free", "opencode/nemotron-3.5-lightning-free", effort=None),
+    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/deepseek-v4.1-flash-free", "opencode/glm-5.3-flash-free", effort=None),
     "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6-luna", effort={"orchestrate": "high"}),
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6.1-sol",            "openrouter/openai/gpt-6.1-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
     "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5"),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
-    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4.1-flash-1017", effort={"orchestrate": "high", "easy-worker": "high"}),
+    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/xiaomi/mimo-v2.6-pro", "openrouter/deepseek/deepseek-v4.1-flash-1017",
+                                  effort={"orchestrate": "high", "easy-worker": "high", "hard-worker": None, "review": None}),
 }
+# As in Codex (MODEL_OVERRIDES): hard-worker runs GPT-6.1 Terra, review stays on Sol.
+OPENCODE_STACKS["openai"]["hard-worker"]["model"] = "openai/gpt-6.1-terra"
+OPENCODE_STACKS["openai-openrouter"]["hard-worker"]["model"] = "openrouter/openai/gpt-6.1-terra"
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", None)
 for _stack, _spec in OPENCODE_STACKS.items():
@@ -473,7 +486,7 @@ def write(rel, text):
 
 # ------------------------------------------------------------------ Claude Code
 for n, body in BODIES.items():
-    fm = [f"name: {n}", f"description: {DESC[n]}", f"model: {MODELS['claude'][TIER[n]]}", f"effort: {EFFORT[n]}"]
+    fm = [f"name: {n}", f"description: {DESC[n]}", f"model: {model_for('claude', n)}", f"effort: {EFFORT[n]}"]
     if n == "investigate":
         fm.append("tools: Read, Grep, Glob, Bash, WebFetch, WebSearch, Skill")
     elif n in READONLY:
@@ -489,7 +502,7 @@ for n, body in BODIES.items():
     write(f"agents/codex/{n}.toml",
           f'name = "{n}"\n'
           f'description = "{DESC[n]}"\n'
-          f'model = "{MODELS["codex"][TIER[n]]}"\n'
+          f'model = "{model_for("codex", n)}"\n'
           f'model_reasoning_effort = "{EFFORT_OPENAI[n]}"\n'
           f'developer_instructions = """\n{body}"""\n')
 
@@ -614,7 +627,7 @@ write("skills/orchestrate/references/claude-code.md", """# Claude Code binding
 write("skills/orchestrate/references/codex.md", """# Codex binding
 
 - **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
-- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`, hard tier is `gpt-6.1-sol` at high reasoning effort; `review` is hard tier. If either override is not callable in the live runtime, report blocked on model availability. Never substitute another model.
+- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`. Hard tier is `gpt-6.1-sol` at high reasoning effort, except `hard-worker`, which runs `gpt-6.1-terra` at high reasoning effort; `review` is hard tier and runs `gpt-6.1-sol`. If any of these models is not callable in the live runtime, report blocked on model availability. Never substitute another model.
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`. The wave's results come back together.
 - **Sandbox:** workers inherit the session's sandbox and approval settings; a worker file cannot change them. Read-only workers are read-only by their instructions only, so tell `investigate` and `review` in the brief not to modify files. The commander should run the session in `workspace-write` (the default): reviewers re-run or add checks when the worker's output falls short, which a `read-only` session blocks when they write caches or build output.

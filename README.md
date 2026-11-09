@@ -24,10 +24,10 @@ The same four workers exist in every runtime, with identical prompts. Only the m
 
 | Worker | Tier | Claude Code | Codex | OpenCode\* |
 |---|---|---|---|---|
-| `investigate` | easy, read-only | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
-| `easy-worker` | easy | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
-| `hard-worker` | hard | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
-| `review` | hard, read-only | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
+| `investigate` | easy, read-only | sonnet | gpt-6-luna | glm-5.3-flash-free |
+| `easy-worker` | easy | sonnet | gpt-6-luna | glm-5.3-flash-free |
+| `hard-worker` | hard | opus | gpt-6.1-terra | deepseek-v4.1-flash-free |
+| `review` | hard, read-only | opus | gpt-6.1-sol | deepseek-v4.1-flash-free |
 
 \* The OpenCode column shows the default `free` stack. You choose OpenCode's models at install time with `--opencode-stack=<name>`. See [OpenCode model stacks](#opencode-model-stacks).
 
@@ -127,7 +127,7 @@ Your session's model plays the orchestrator, so pick the strongest one available
 | Codex | GPT-6.1 Sol, high reasoning effort | `/model` |
 | OpenCode | DeepSeek V4.1 Flash on the default `free` stack | The installed stack sets the `orchestrate` agent's model and effort. See [OpenCode model stacks](#opencode-model-stacks). |
 
-Give this role the best judgment you can afford. A weak orchestrator sends tasks to the wrong worker and accepts weak review verdicts. Fast, cheap models belong underneath it, doing the work. That is why the default `free` stack runs MiMo V2.6 Flash as its hard worker and Nemotron 3.5 Lightning as its easy one.
+Give this role the best judgment you can afford. A weak orchestrator sends tasks to the wrong worker and accepts weak review verdicts. Fast, cheap models belong underneath it, doing the work. That is why the default `free` stack runs GLM-5.3-Flash as its easy workers, under a DeepSeek V4.1 Flash orchestrator.
 
 ## OpenCode model stacks
 
@@ -153,32 +153,34 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 
 Installing a different stack replaces the five installed OpenCode agent files. The installer asks first unless you pass `--yes`. Start a fresh session afterwards. Every stack except `free` needs its provider linked first with `opencode auth login`.
 
-The table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`. Model IDs use OpenCode's `provider/model` form, as `opencode models` prints them. A `#low`, `#medium`, or `#high` suffix is the effort level.
+The table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`. Model IDs use OpenCode's `provider/model` form, as `opencode models` prints them. A `#low`, `#medium`, or `#high` suffix is the effort level. A model with no suffix runs at its provider's default, because OpenCode offers no effort levels for it.
 
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
 | `orchestrate` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#low` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#low` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/deepseek/deepseek-v4.1-flash-1017#low` |
-| `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#medium` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
-| `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `review` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `investigate` | `opencode/glm-5.3-flash-free` | `openai/gpt-6-luna#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#low` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/deepseek/deepseek-v4.1-flash-1017#low` |
+| `easy-worker` | `opencode/glm-5.3-flash-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#medium` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
+| `hard-worker` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-terra#high` | `openrouter/openai/gpt-6.1-terra#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
+| `review` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
 
-Rough cost per million tokens, from OpenRouter list prices in October 2026:
+Rough cost per million tokens, from OpenRouter list prices in November 2026:
 
 | Model | Input | Output |
 |---|---|---|
-| DeepSeek V4.1 Flash, MiMo V2.6 Flash†, and Nemotron 3.5 Lightning†, free on OpenCode Zen | $0 | $0 |
+| DeepSeek V4.1 Flash and GLM-5.3-Flash, free on OpenCode Zen† | $0 | $0 |
 | GPT-6.1 Sol | $2 | $10 |
+| GPT-6.1 Terra | $1 | $5 |
 | GPT-6 Luna | $0.10 | $0.50 |
 | Claude Opus 5.5 | $4 | $20 |
 | Claude Sonnet 5.5 | $2 | $10 |
+| MiMo V2.6 Pro | $0.435 | $0.87 |
 | DeepSeek V4 Pro 0813 | $0.66 | $1.98 |
 | DeepSeek V4.1 Flash 1017 | $0.15 | $0.60 |
 
 The DeepSeek prices are off-peak. At peak, weekdays 01:00-04:00 and 06:00-10:00 UTC, DeepSeek charges double, and OpenRouter passes the peak price through. V4 Pro then costs $1.32 in and $3.96 out, and V4.1 Flash costs $0.30 in and $1.20 out.
 
-† **Free-tier terms.** MiMo V2.6 Flash (`hard-worker` and `review`) is free on terms that let its provider use collected data to improve the model. Nemotron 3.5 Lightning (`investigate` and `easy-worker`) is for trial use only, with no personal or confidential data. These workers read your files and code, and only the orchestrator's provider promises zero retention. Do not use the `free` stack on confidential code. Install `--opencode-stack=openai` or `--opencode-stack=claude` instead.
+† **Free-tier terms.** OpenCode Zen's docs say the providers of both free models follow a zero-retention policy and do not use your data for training. Most other free Zen models use what they see to improve the model, so check the [Zen docs](https://opencode.ai/docs/zen/) before you swap one in. Both are free for a limited time, and the three DeepSeek agents share one free endpoint's rate limits.
 
 The `free` stack costs nothing, but its models are weaker. Read the review verdicts yourself.
 
@@ -207,7 +209,7 @@ If you forked the repo, clone your fork instead. Then change `REPO_SLUG` at the 
 3. If you use Codex, run `./install.sh` to refresh its copied worker files.
 4. Start a fresh session in the runtime to pick up the change. Commit once it works.
 
-To change a model for Claude Code or Codex, edit one line in the `MODELS` table. OpenCode's models live in `OPENCODE_STACKS`. To move OpenCode to another provider or price point, you do not need to edit anything. Run the installer again with `--opencode-stack=<name>` (see [OpenCode model stacks](#opencode-model-stacks)).
+To change a model for Claude Code or Codex, edit one line in the `MODELS` table, or give one worker its own model in `MODEL_OVERRIDES` (Codex's `hard-worker` runs GPT-6.1 Terra this way). OpenCode's models live in `OPENCODE_STACKS`. To move OpenCode to another provider or price point, you do not need to edit anything. Run the installer again with `--opencode-stack=<name>` (see [OpenCode model stacks](#opencode-model-stacks)).
 
 Adding a runtime takes four changes: a generator block in `build.py`, a binding file under `skills/orchestrate/references/`, a line in step 0 of the skill, and a row in `install.sh`. `build.py` generates the binding file and the skill line, so add both of them in `build.py`.
 
