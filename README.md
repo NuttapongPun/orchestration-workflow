@@ -36,7 +36,7 @@ Workers cannot start other workers. Each runtime enforces this differently. Clau
 "Read-only" in the table is the worker's role. Each runtime enforces a different amount of it:
 
 - **Claude Code** gives the read-only workers no edit tools, but gives them `Bash`.
-- **OpenCode** denies their edit tools. `investigate` gets a shell limited to an allowlist of inspection commands, and those deny rules are best-effort (see [Runtime notes](#runtime-notes)). `review` gets a full shell so it can run tests.
+- **OpenCode** denies their edit tools but gives both a full shell, so `investigate` can inspect anything and `review` can run tests.
 - **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is only a prompt rule. Run Codex in the `workspace-write` sandbox, which is the default, because `review` needs it to run tests.
 
 One reviewer, `review`, checks all work, easy and hard, on the strong model. The orchestrator runs it once, after the last change. It runs it earlier only when later work builds on files that an earlier step wrote. `review` checks the change against the acceptance criteria and against the repository's written rules (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and style guides). It reports spec, standards, and code defects separately, so a clean result in one cannot hide a failure in another.
@@ -218,7 +218,7 @@ After you change the skill or its plan gate, run `python3 evals/run.py --dry-run
 ## Runtime notes
 
 - **Codex** needs 0.153 or newer. Run sessions in `workspace-write`, the default. Workers inherit your session's sandbox, so the read-only workers are read-only by prompt only. See [Codex web search](#codex-web-search) for the browsing setting.
-- **OpenCode** needs 2.0 or newer. On macOS, run `brew install anomalyco/tap/opencode-v2`. That formula conflicts with the v1 `opencode` formula, so uninstall v1 first. The read-only rules for `investigate` and `review` are best-effort, and a prompt-injected model can get past them.
+- **OpenCode** needs 2.0 or newer. On macOS, run `brew install anomalyco/tap/opencode-v2`. That formula conflicts with the v1 `opencode` formula, so uninstall v1 first. `investigate` and `review` stay read-only only by their prompts once they use the shell, and a prompt-injected model can ignore that. `investigate` also browses the web, so a page it reads can inject commands, including ones that print API keys from the environment.
 - **Providers (OpenCode):** `free` needs no login. If your install asks for one, run `opencode auth login` and pick OpenCode Zen. Every other stack needs its provider linked first with `opencode auth login`: `openai` needs OpenAI, `claude` needs Anthropic, and `*-openrouter` needs OpenRouter.
 
 ## Companion skills

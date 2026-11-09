@@ -19,7 +19,7 @@ Preserve these when adapting. Each one closes a failure the workflow was built t
 - Workers cannot spawn workers. Each runtime enforces it differently (see `build.py`); keep the enforcement when adding one.
 - One reviewer, `review`, runs on the hard tier for all work, and the orchestrator judges the verdict itself, including whether the tests actually ran.
 - The skill is user-invoked only (`disable-model-invocation: true`). A model must never start orchestration on its own.
-- Read-only workers stay read-only at the runtime level where the runtime supports it, not only in the prompt. Claude Code removes their edit tools. OpenCode denies their edits and gives `investigate` a shell allowlist. Codex has no per-agent mechanism, because every worker inherits the session's sandbox, so there read-only is prompt-only; do not add a per-agent `sandbox_mode` back, since Codex ignores it.
+- Read-only workers stay read-only at the runtime level where the runtime supports it, not only in the prompt. Claude Code removes their edit tools. OpenCode denies their edits; like Claude Code, it gives both a full shell, so through the shell they are read-only by prompt only. Codex has no per-agent mechanism, because every worker inherits the session's sandbox, so there read-only is prompt-only; do not add a per-agent `sandbox_mode` back, since Codex ignores it.
 - The plan gate conditions are written once, in the shared `ORCHESTRATOR` text in `build.py`, which generates both `SKILL.md` and every OpenCode `orchestrate.md`; `README.md` summarizes them, and `evals/scenarios/` asserts their phrases. Change all three together, then rebuild and run `python3 evals/run.py --dry-run`.
 
 ## Branches

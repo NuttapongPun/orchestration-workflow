@@ -509,64 +509,6 @@ for n, body in BODIES.items():
 # ------------------------------------------------------------------ OpenCode
 # OpenCode 2 format: `permissions` is an ordered rule list where the last match wins, so each
 # broad rule comes before its exceptions. A shell pattern ending in " *" also matches the bare command.
-# How OpenCode 2.0.29 checks a shell line (read from its bundled source): tree-sitter-bash splits it
-# into simple commands, so each side of `&&`, `||`, `;`, `|` and each `$(...)` is checked on its own,
-# and one deny blocks the whole line. `*` matches any text, spaces and `>` included, and a command's
-# redirect is part of its text, so "cat *" alone would also allow `cat a > b`. OC_READ_DENY blocks
-# that form, but a redirect on a pipeline, `{ ...; }`, `( ... )` or loop belongs to no command's text
-# and is never checked: `cat a | head > b` passes. No rule can close that; it needs an OpenCode fix.
-# The whole deny list is best-effort for the same reason: the text is matched before the shell
-# expands it, so a determined or prompt-injected model can pass a denied flag or path through a
-# variable, quotes, a glob, or a combined short flag (`X=-delete; find . $X`, `find . -de'l'ete`,
-# `cat /proc/self/env*`, `uv pip list -vp <prog>`),
-# and recursive `grep -r`/`rg` can still read `.env` contents without naming the file.
-# Read-only inspection for `investigate`. Commands whose output is the environment (bare `env`,
-# `printenv`, `set`, `export`, `mise env`, `mise doctor`, which prints MISE_* values) are left out on
-# purpose: they would put every API key in the model's context, and some stacks send that context to
-# free models whose terms do not protect it.
-# `<tool> --version` is listed per tool, not as "* --version": `sh -c '<cmd>' --version` would match.
-OC_READ_CMDS = [
-    "ls *", "find *", "cat *", "head *", "tail *", "wc *", "grep *", "rg *", "stat *",
-    "readlink *", "realpath *", "pwd", "uname *", "sw_vers *", "which *", "command -v *", "type *",
-    "git log *", "git show *", "git diff *", "git blame *", "git status *",
-    "git stash list *", "git stash show *", "git rev-parse *", "git ls-files *", "git ls-tree *",
-    "git cat-file *", "git describe *", "git shortlog *", "git rev-list *", "git merge-base *",
-    "git reflog", "git reflog show *", "git worktree list *", "git remote", "git remote -v",
-    "git remote get-url *",
-    # Bare `git branch`/`git tag` and `-a`/`-r` list, but add a name and they create or delete. With
-    # `--list`/`-l` git rejects any write mode, so only those forms take further arguments.
-    "git branch", "git branch -a", "git branch -r", "git branch -v", "git branch -vv", "git branch -av",
-    "git branch --show-current", "git branch --list *", "git tag", "git tag -l *", "git tag --list *",
-    *[f"{t} --version" for t in ["brew", "mise", "uv", "git", "node", "npm", "pnpm", "yarn", "bun", "deno",
-                                  "python", "python3", "ruby", "cargo", "rustc"]], "go version",
-    "brew list *", "brew ls *", "brew info *", "brew config *", "brew leaves *", "brew deps *", "brew uses *",
-    "brew --prefix *", "brew --cellar *", "brew --repository *", "brew services list *",
-    # `mise config` alone lists; `mise config set` writes, so only its read subcommands are allowed.
-    "mise ls *", "mise list *", "mise current *", "mise where *", "mise which *", "mise version",
-    "mise config", "mise config ls *", "mise config list *", "mise config get *",
-    "mise settings ls *", "mise settings list *", "mise settings get *", "mise plugins ls *",
-    # `uv version` can set the project version and plain `uv tree` can rewrite uv.lock, so neither is listed.
-    # uv runs any interpreter request as a program, a bare name on PATH included, so `uv python find`
-    # is left out and `uv python list` is allowed only without a request.
-    "uv self version *", "uv tool list *", "uv tool dir *", "uv python list", "uv python list --only-installed",
-    "uv python dir *", "uv pip list *", "uv pip show *", "uv pip freeze *", "uv tree --frozen *",
-    "uv tree --locked *", "uv cache dir *",
-]
-# Denied after OC_READ_CMDS, so they win: flags and paths that make an allowed command write, run
-# something, or expose secrets.
-OC_READ_DENY = [
-    "find *-delete*", "find *-exec*", "find *-ok*", "find *-fprint*", "find *-fls*",  # -execdir, -okdir, -fprint0/f too
-    "rg *--pre*",                        # runs a preprocessor command on every file searched
-    "rg *--hostname-bin*",               # runs the named program (rg has no abbreviated flags)
-    "brew *.rb*",                        # a formula file path or file:// URL loads its Ruby (HOMEBREW_DEVELOPER)
-    "uv *--python*", "uv * -p*",         # stop uv running a chosen program as the interpreter
-    "git *--output*",                    # git diff/log/show --output=<file>
-    "*/proc/*/environ*",                 # Linux: a process's environment, keys included
-    # A path segment starting `.env` (.env, .env.local, .envrc): bare, after `/`, quoted, or after `<`;
-    # `process.env` and `os.environ` stay searchable.
-    "* .env*", "*/.env*", "*'.env*", "*\".env*", "*<.env*",
-    "*>*",                               # any output redirect; also blocks `2>/dev/null` and a quoted `>`
-]
 COLOR = {"investigate": "#38bdf8", "easy-worker": "#22c55e", "hard-worker": "#f59e0b", "review": "#f59e0b"}
 # OC_AGENTS is written out above, before BODIES exists; renaming a worker must not leave the
 # stacks keyed by the old name, so check the two agree now that BODIES is defined.
@@ -593,20 +535,17 @@ def oc_agent(desc, mode, model, color, rules, body):
 
 # Workers deny `subagent` (no nesting) and `question`: they run in the background, where no one
 # is waiting to answer. For the same reason no worker's shell falls back to `ask`: an off-list
-# command would wait for an approver that does not exist. `investigate` falls back to deny.
-# Reviewers get full shell with edits denied: they must run arbitrary project checks (scripts,
-# linters, `make`/`just` targets, `python3 build.py`, `python3 evals/run.py --dry-run`), and a test
-# allowlist that already admitted `npm run`/`npx` ran arbitrary code without enforcing read-only.
-# They are read-only by edit-tool denial plus their prompt, like the Claude Code reviewers (Bash,
-# no Edit/Write). Codex has no per-agent control: every worker inherits the session's sandbox.
+# command would wait for an approver that does not exist.
+# Read-only workers get full shell with edits denied. `review` must run arbitrary project checks
+# (scripts, linters, `make`/`just` targets), and an `investigate` allowlist of inspection commands
+# kept blocking ordinary reads. Both are read-only by edit-tool denial plus their prompt, like the
+# Claude Code ones (Bash, no Edit/Write). Codex has no per-agent control: every worker inherits the
+# session's sandbox.
 for stack, stack_spec in OPENCODE_STACKS.items():
     for n, body in BODIES.items():
+        rules = [oc_rule("edit", "*", "deny" if n in READONLY else "allow"), oc_rule("shell", "*", "allow")]
         if n == "investigate":
-            rules = [oc_rule("edit", "*", "deny"), oc_rule("webfetch", "*", "allow"), oc_rule("websearch", "*", "allow"),
-                     oc_rule("shell", "*", "deny")] + [oc_rule("shell", c, "allow") for c in OC_READ_CMDS] + \
-                    [oc_rule("shell", c, "deny") for c in OC_READ_DENY]
-        else:
-            rules = [oc_rule("edit", "*", "deny" if n in READONLY else "allow"), oc_rule("shell", "*", "allow")]
+            rules += [oc_rule("webfetch", "*", "allow"), oc_rule("websearch", "*", "allow")]
         rules += [oc_rule("subagent", "*", "deny"), oc_rule("question", "*", "deny")] + \
                  [oc_rule(*r) for r in OC_SKILL_RULES]
         write(f"agents/opencode/{stack}/{n}.md",
