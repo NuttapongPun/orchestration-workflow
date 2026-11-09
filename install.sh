@@ -46,6 +46,9 @@ RUNTIMES=(
   "Codex|$HOME/.codex|$HOME/.codex/agents|codex|$HOME/.codex/skills"
   "OpenCode|$HOME/.config/opencode|$HOME/.config/opencode/agents|opencode/$OC_STACK|"
 )
+# Workers this workflow no longer ships. An update deletes their installed files, under the same
+# one confirmation as replacing the current ones, so the orchestrator cannot see a stale worker.
+RETIRED=(review-hard)
 
 say()  { printf '%s\n' "$*"; }
 HAVE_TTY=0; ( : < /dev/tty ) 2>/dev/null && HAVE_TTY=1   # can we actually open the keyboard? (curl | bash still can)
@@ -73,7 +76,7 @@ if [[ $UNINSTALL -eq 1 ]]; then
   for rt in "${RUNTIMES[@]}"; do
     IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
     # File names, not the source subdir: the OpenCode agents are removed whichever stack installed them.
-    for w in investigate easy-worker hard-worker review review-hard orchestrate; do
+    for w in investigate easy-worker hard-worker review orchestrate "${RETIRED[@]}"; do
       for ext in md toml; do f="$agents_dir/$w.$ext"; [[ -e "$f" || -L "$f" ]] && rm -f "$f" && say "removed $f"; done
     done
     [[ -n "$skills_dir" && -L "$skills_dir/orchestrate" ]] && rm -f "$skills_dir/orchestrate" && say "removed $skills_dir/orchestrate"
@@ -157,6 +160,9 @@ for rt in "${FOUND[@]}"; do
     if [[ "$MODE" == "link" ]] && ! copy_only "$src"; then same_target "$dest" "$f" && continue
     else [[ ! -L "$dest" ]] && cmp -s "$f" "$dest" && continue; fi
     EXISTING+=("$dest")
+  done
+  for w in "${RETIRED[@]}"; do
+    for ext in md toml; do f="$agents_dir/$w.$ext"; [[ -e "$f" || -L "$f" ]] && EXISTING+=("$f"); done
   done
 done
 # The canonical skill directory and the per-runtime pointers to it are replaced in place, so
@@ -250,6 +256,12 @@ for rt in "${FOUND[@]}"; do
   if [[ "$src" == opencode/* ]]; then say "$name (stack: ${src#opencode/}):"; else say "$name:"; fi
   co=0; copy_only "$src" && co=1
   for f in "$SRC/agents/$src"/*; do place "$f" "$agents_dir/$(basename "$f")" "$co"; done
+  for w in "${RETIRED[@]}"; do
+    for ext in md toml; do
+      f="$agents_dir/$w.$ext"; [[ -e "$f" || -L "$f" ]] || continue
+      if [[ $REPLACE -eq 1 ]]; then rm -f "$f"; say "  removed retired worker $f"; else say "  kept retired worker $f (not replaced)."; fi
+    done
+  done
   if [[ -n "$skills_dir" ]]; then
     link="$skills_dir/orchestrate"
     if same_target "$link" "$CANON" || points_to "$link" "$CANON"; then :

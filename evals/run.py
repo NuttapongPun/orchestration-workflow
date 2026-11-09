@@ -36,9 +36,8 @@ EVALS = Path(__file__).resolve().parent
 REPO = EVALS.parent
 HOME = Path.home().resolve()
 
-WORKERS = ["investigate", "easy-worker", "hard-worker", "review", "review-hard"]
-TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard",
-        "review": "easy", "review-hard": "hard"}
+WORKERS = ["investigate", "easy-worker", "hard-worker", "review"]
+TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "hard"}
 # Claude Code binding (skills/orchestrate/references/claude-code.md): easy tier sonnet, hard tier opus.
 CLAUDE_TIER_MODEL = {"easy": "sonnet", "hard": "opus"}
 
@@ -57,7 +56,7 @@ DEFAULT_ASSERT = {
     # The orchestrator itself never edits or runs commands (SKILL.md: "You never edit files
     # or run production commands yourself"). Checked on top-level tool calls only.
     "forbidden_tools": ["Edit", "Write", "NotebookEdit", "MultiEdit", "Bash"],
-    # Only the five workers; this also catches subagent_type "fork" and a general-purpose fallback.
+    # Only the four workers; this also catches subagent_type "fork" and a general-purpose fallback.
     "allowed_subagent_types": list(WORKERS),
     # Every dispatch sets `model` explicitly, to the worker's tier model.
     "model_set": True,
@@ -256,7 +255,7 @@ def describe_skill(runtime):
                 status.append(f"{w}: MISSING")
             elif not filecmp.cmp(inst, src, shallow=False):
                 status.append(f"{w}: differs from repo")
-        lines.append("  Workers in ~/.claude/agents: " + ("all five match the repo" if not status else "; ".join(status)))
+        lines.append("  Workers in ~/.claude/agents: " + ("all four match the repo" if not status else "; ".join(status)))
     return lines, real
 
 

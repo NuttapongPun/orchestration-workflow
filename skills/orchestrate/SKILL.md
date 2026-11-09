@@ -15,8 +15,7 @@ The workers are the same in every runtime:
 | `investigate` | easy | read-only research: how something works, where things live, what patterns exist |
 | `easy-worker` | easy | localized changes with clear requirements and an existing pattern to copy |
 | `hard-worker` | hard | architecture, multi-module changes, security, concurrency, migrations, performance, debugging, complex UI |
-| `review` | easy | review and QA of easy-tier work |
-| `review-hard` | hard | review and QA of hard-tier work |
+| `review` | hard | read-only review and QA of all work, easy-tier and hard-tier |
 
 **Mandatory delegation gate:** do not proceed with a task until it has a callable worker assignment. If the runtime does not expose the worker, or dispatch fails after a materially improved retry, stop and report **blocked on worker availability**. Never silently fall back to doing the work yourself.
 
@@ -38,7 +37,7 @@ Ask the commander only when two readings of the request would produce materially
 
 ## 2. Inspect the available workers
 
-Read the runtime's advertised agent list before assigning work. Confirm each of the five workers is actually callable with the tools its task needs. Do not assume a worker exists because it existed in another runtime or session. If a worker is missing, report the gap rather than substituting.
+Read the runtime's advertised agent list before assigning work. Confirm each of the four workers is actually callable with the tools its task needs. Do not assume a worker exists because it existed in another runtime or session. If a worker is missing, report the gap rather than substituting.
 
 ## 3. Decompose by ownership
 
@@ -55,7 +54,7 @@ Choose the worker task by task:
 - `investigate` before planning any non-trivial change you lack context for.
 - `easy-worker` only when the change is localized, the requirements are clear, and an existing pattern demonstrates the shape. When uncertain, choose `hard-worker`.
 - `hard-worker` for anything that spans modules, needs design judgment, touches security or concurrency, or where a wrong result is costly to detect.
-- `review` after easy-tier work, `review-hard` after hard-tier work.
+- `review` once the work is done, for both tiers (section 9).
 
 Record a one-sentence rationale for each routing decision. Set the worker's model explicitly on every dispatch per the runtime reference. Never leave it on inherit.
 
@@ -103,7 +102,7 @@ Adapt from evidence: reassign when a different worker is clearly better suited, 
 
 ## 9. Review and judge
 
-After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, the worker's verification evidence, and, for UI work, the browser-check scope from the brief. Browser checks the review lists as NOT RUN go in the report's unresolved risks; never report **ready for you** without naming them.
+Review once, after the last wave that changed something: dispatch `review` with the goal, the acceptance criteria, the list of every changed file, each worker's verification evidence, and, for UI work, the browser-check scope from the brief. Review earlier only when a later wave builds on files an earlier wave wrote: review that wave before starting the dependent one, so a defect is not built on. When the change is too large for one reviewer to read in full, split the review by area into parallel `review` tasks. Browser checks the review lists as NOT RUN go in the report's unresolved risks; never report **ready for you** without naming them.
 
 Treat every worker summary and every review verdict as a claim. Your job is to judge it:
 

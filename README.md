@@ -20,15 +20,14 @@ install.sh               installs all of the above into the runtimes present on 
 evals/                   behavioral tests for the skill (see evals/README.md). Not installed anywhere.
 ```
 
-The same five workers exist in every runtime, with identical prompts. Only the model names differ:
+The same four workers exist in every runtime, with identical prompts. Only the model names differ:
 
 | Worker | Tier | Claude Code | Codex | OpenCode\* |
 |---|---|---|---|---|
 | `investigate` | easy, read-only | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
 | `easy-worker` | easy | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
 | `hard-worker` | hard | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
-| `review` | easy, read-only | sonnet | gpt-6-luna | nemotron-3.5-lightning-free |
-| `review-hard` | hard, read-only | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
+| `review` | hard, read-only | opus | gpt-6.1-sol | mimo-v2.6-flash-free |
 
 \* The OpenCode column shows the default `free` stack. OpenCode's models are chosen per install with `--opencode-stack=<name>`; see [OpenCode model stacks](#opencode-model-stacks).
 
@@ -37,10 +36,10 @@ Workers cannot spawn workers. Claude workers lack the `Agent` tool, Codex gets `
 "Read-only" in the table is the worker's role. How much of it each runtime enforces differs:
 
 - **Claude Code** gives the read-only workers no edit tools, but does give them `Bash`.
-- **OpenCode** denies their edit tools. `investigate` also gets a shell limited to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes); `review` and `review-hard` get a full shell so they can run tests.
+- **OpenCode** denies their edit tools. `investigate` also gets a shell limited to an allowlist of inspection commands, whose deny rules are best-effort (see Runtime notes); `review` gets a full shell so it can run tests.
 - **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is a prompt rule for all of them. Run Codex in the `workspace-write` sandbox (the default): reviewers need it to run tests.
 
-`review` and `review-hard` cite the worker's test output and re-run or add checks where it falls short, so every runtime gives them a shell, and through it they can still write. Staying read-only there is a prompt rule. Workers and reviewers check in a real browser only for flows the brief names, new pages, major layout or flow changes, and complex flows.
+There is one reviewer, `review`, on the strong model, for easy and hard work alike. The orchestrator runs it once, after the last change, and earlier only when later work builds on files an earlier step wrote. It checks the change against the acceptance criteria and against the repository's written rules (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, style guides), and reports spec, standards, and code defects separately, so a clean result in one cannot hide a failure in another. It cites the worker's test output and re-runs or adds checks where it falls short, so every runtime gives it a shell, and through it it can still write. Staying read-only there is a prompt rule. Workers and reviewers check in a real browser only for flows the brief names, new pages, major layout or flow changes, and complex flows.
 
 ## Install
 
@@ -116,7 +115,7 @@ Give this role the best judgment you can afford. Put a provider's cheapest tier 
 
 ## OpenCode model stacks
 
-OpenCode fixes each agent's model and effort in its file, so all six agents are chosen together as a stack. Every stack below is pre-generated into its own directory under `agents/opencode/`, and the installer installs the one you name:
+OpenCode fixes each agent's model and effort in its file, so all five agents are chosen together as a stack. Every stack below is pre-generated into its own directory under `agents/opencode/`, and the installer installs the one you name:
 
 ```bash
 # free (OpenCode Zen, default; the flag is optional here)
@@ -136,9 +135,9 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 ./install.sh --opencode-stack=openai
 ```
 
-Re-running with a different stack replaces the six installed OpenCode agent files, and the installer asks before replacing unless `--yes` is passed. Without the flag you get `free`. Model IDs are in OpenCode's `provider/model` form, as printed by `opencode models`; every stack except `free` needs its provider linked first with `opencode auth login`.
+Re-running with a different stack replaces the five installed OpenCode agent files, and the installer asks before replacing unless `--yes` is passed. Without the flag you get `free`. Model IDs are in OpenCode's `provider/model` form, as printed by `opencode models`; every stack except `free` needs its provider linked first with `opencode auth login`.
 
-Each stack sets a model for each of the six OpenCode agents, so the table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`:
+Each stack sets a model for each of the five OpenCode agents, so the table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`:
 
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
@@ -147,8 +146,7 @@ Each stack sets a model for each of the six OpenCode agents, so the table has on
 | `investigate` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#low` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/deepseek/deepseek-v4.1-flash-1017#low` |
 | `easy-worker` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#medium` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
 | `hard-worker` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `review` | `opencode/nemotron-3.5-lightning-free` | `openai/gpt-6-luna#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#medium` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
-| `review-hard` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `review` | `opencode/mimo-v2.6-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
 
 Rough cost per million tokens (input / output), OpenRouter list prices in October 2026:
 
@@ -161,7 +159,7 @@ Rough cost per million tokens (input / output), OpenRouter list prices in Octobe
 
 DeepSeek prices are off-peak. At peak (weekdays 01:00-04:00 and 06:00-10:00 UTC) DeepSeek charges double, $1.32 / $0.30 in and $3.96 / $1.20 out, and OpenRouter passes the same peak pricing through.
 
-† **Free-tier terms.** MiMo V2.6 Flash (`hard-worker`, `review-hard`) is free on terms that let its provider use collected data to improve the model, and Nemotron 3.5 Lightning (`investigate`, `easy-worker`, `review`) is for trial use only, with no personal or confidential data. These workers read your files and code; only the orchestrator's provider promises zero retention. Do not use the `free` stack on confidential code; install `--opencode-stack=openai` or `--opencode-stack=claude` instead.
+† **Free-tier terms.** MiMo V2.6 Flash (`hard-worker`, `review`) is free on terms that let its provider use collected data to improve the model, and Nemotron 3.5 Lightning (`investigate`, `easy-worker`) is for trial use only, with no personal or confidential data. These workers read your files and code; only the orchestrator's provider promises zero retention. Do not use the `free` stack on confidential code; install `--opencode-stack=openai` or `--opencode-stack=claude` instead.
 
 Notes:
 
@@ -204,15 +202,19 @@ After changing the skill or its plan gate, run `python3 evals/run.py --dry-run` 
 
 ## Companion skills
 
-These skills pair well with this workflow. Workers load an installed skill when it matches the task, and the workflow works the same without any of them. Most install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, which links them into every agent it detects.
+The workflow works without any of these. Install only the ones you use: every installed skill's description is shown to the orchestrator and to every worker, and a skill a worker cannot run, one that spawns agents or interviews you, only adds noise.
 
-**[mattpocock/skills](https://github.com/mattpocock/skills)**: engineering and productivity skills such as TDD, bug diagnosis, and codebase design. Interactive: pick only the ones you want.
+### For workers
+
+Workers load one of these when it matches their task. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, which links them into every agent it detects. `npx skills update` refreshes them, and `~/.agents/.skill-lock.json` records the source and commit of each one.
+
+**`tdd` and `diagnosing-bugs`** from [mattpocock/skills](https://github.com/mattpocock/skills): test-first development, and a diagnosis loop for hard bugs and performance regressions. Install these two rather than the whole pack, which is built for working with you directly.
 
 ```bash
-npx skills add mattpocock/skills --global
+npx skills add mattpocock/skills --global --skill tdd diagnosing-bugs
 ```
 
-**[playwright-cli](https://github.com/microsoft/playwright-cli)**: lets agents drive a browser, test web pages, and run Playwright tests.
+**[playwright-cli](https://github.com/microsoft/playwright-cli)**: drives a browser from the shell, for checking web pages and running Playwright tests. The reviewer can use it too, since it only needs a shell.
 
 ```bash
 npx skills add microsoft/playwright-cli --global
@@ -230,13 +232,13 @@ npx skills add kepano/obsidian-skills --global --skill defuddle
 npx skills add anthropics/skills --global --skill frontend-design
 ```
 
-**[Impeccable](https://github.com/pbakaus/impeccable)**: frontend design guidance, `/impeccable` review commands, and a detector for AI-generated design flaws. Run it from a project root; it asks which agents to install for, and whether to install for the project or globally.
+### For you
+
+**`unslop` and `technical-writing`** from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack). `/unslop` removes AI-sounding patterns from text. `/technical-writing` is a standard for docs, READMEs, PR descriptions, and commit messages, and applies `unslop` as it goes. Both are user-invoked only, so workers never load them; run them yourself on writing you want to tighten.
 
 ```bash
-npx impeccable install
+npx skills add cursor/plugins --global --skill unslop technical-writing
 ```
-
-`npx skills update` refreshes the skills installed through the `skills` CLI. `~/.agents/.skill-lock.json` records the exact source and commit of each one.
 
 Workers read a project's `DESIGN.md` before UI work. To give agents your visual identity in a structured form, see Google's [DESIGN.md format](https://github.com/google-labs-code/design.md).
 

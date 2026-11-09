@@ -16,9 +16,10 @@ import re
 ROOT = pathlib.Path(__file__).resolve().parent
 
 # ------------------------------------------------------------------ tiers
-TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "easy", "review-hard": "hard"}
-READONLY = {"investigate", "review", "review-hard"}
-EFFORT = {"investigate": "medium", "easy-worker": "medium", "hard-worker": "high", "review": "medium", "review-hard": "high"}
+# One reviewer, on the hard tier, for all work: an easy-tier reviewer was rarely the right call.
+TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "hard"}
+READONLY = {"investigate", "review"}
+EFFORT = {"investigate": "medium", "easy-worker": "medium", "hard-worker": "high", "review": "high"}
 # Codex only: investigate runs at low effort, tuned for ChatGPT subscription limits, where
 # reasoning tokens count against the 5-hour window.
 # OpenCode does not use this table; its effort is set per agent in OPENCODE_STACKS below.
@@ -41,26 +42,26 @@ MODELS = {
 # agent, so `investigate` can differ from the other easy-tier agents.
 # Model IDs are OpenCode's provider/model form (see `opencode models`).
 # Prices are in README.md, "OpenCode model stacks"; alternatives are noted above OPENCODE_STACKS.
-# The six OpenCode agents: the primary orchestrator plus every worker in BODIES. Spelled out
+# The five OpenCode agents: the primary orchestrator plus every worker in BODIES. Spelled out
 # here because BODIES is defined further down; the OpenCode section re-checks the two agree.
-OC_AGENTS = ["orchestrate", "investigate", "easy-worker", "hard-worker", "review", "review-hard"]
+OC_AGENTS = ["orchestrate", "investigate", "easy-worker", "hard-worker", "review"]
 OC_EFFORTS = {"orchestrate": "low", "investigate": "low", "easy-worker": "medium",
-              "hard-worker": "high", "review": "medium", "review-hard": "high"}
+              "hard-worker": "high", "review": "high"}
 
 def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
-    """Expand the usual pm/hard/easy shape into the six per-agent entries.
+    """Expand the usual pm/hard/easy shape into the per-agent entries.
 
     `effort` is either one value (including None) applied to every agent, or a dict
     keyed by agent name. In a dict, every key must be an agent name -- an unknown key
     is an error, so a typo fails the build instead of silently becoming None -- and an
     agent left out keeps its OC_EFFORTS default, which makes a partial override safe:
-        oc_stack(..., effort={"investigate": "high"})   # the other five stay standard
+        oc_stack(..., effort={"investigate": "high"})   # the other agents stay standard
 
     The result is a plain dict, so a stack can also override one agent afterwards:
         s = oc_stack(...); s["investigate"]["model"] = "..."
     """
     model = {"orchestrate": pm, "investigate": easy, "easy-worker": easy,
-             "hard-worker": hard, "review": easy, "review-hard": hard}
+             "hard-worker": hard, "review": hard}
     if isinstance(effort, dict):
         unknown = [k for k in effort if k not in OC_AGENTS]
         if unknown:
@@ -78,7 +79,7 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
 #   opencode/ling-3.0-flash-fin-free (finance-tuned),
 #   opencode/big-pickle (many reports of corrupted output).
 # The DeepSeek models in cheap-openrouter offer only low/high/max effort, so the usual medium
-# rounds up to high (easy-worker, review) and orchestrate is raised from low to high on purpose.
+# rounds up to high (easy-worker) and orchestrate is raised from low to high on purpose.
 # Anthropic IDs use dashes in the version (claude-opus-5-5); OpenRouter IDs use dots (claude-opus-5.5).
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
@@ -88,7 +89,7 @@ OPENCODE_STACKS = {
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6.1-sol",            "openrouter/openai/gpt-6.1-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
     "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5"),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
-    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4.1-flash-1017", effort={"orchestrate": "high", "easy-worker": "high", "review": "high"}),
+    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/deepseek/deepseek-v4-pro-0813", "openrouter/deepseek/deepseek-v4.1-flash-1017", effort={"orchestrate": "high", "easy-worker": "high"}),
 }
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", None)
@@ -96,7 +97,7 @@ for _stack, _spec in OPENCODE_STACKS.items():
     _missing = [a for a in OC_AGENTS if a not in _spec]
     _extra = [a for a in _spec if a not in OC_AGENTS]
     if _missing or _extra:
-        raise SystemExit(f"OPENCODE_STACKS['{_stack}']: every stack needs exactly the six agents {OC_AGENTS}"
+        raise SystemExit(f"OPENCODE_STACKS['{_stack}']: every stack needs exactly the agents {OC_AGENTS}"
                          + (f"; missing {_missing}" if _missing else "") + (f"; unexpected {_extra}" if _extra else ""))
     for _agent, _entry in _spec.items():
         if not isinstance(_entry, dict) or set(_entry) != {"model", "effort"}:
@@ -112,8 +113,7 @@ DESC = {
     "investigate": "Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live.",
     "easy-worker": "Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content.",
     "hard-worker": "Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.",
-    "review": "Read-only review and QA worker for easy-tier work. Verifies changes against requirements, hunts for defects, checks the test evidence and runs what is missing, returns a verdict.",
-    "review-hard": "Read-only review and QA worker for hard-tier work. Strong model. Verifies changes against requirements, hunts for costly-to-detect defects, checks the test evidence and runs what is missing, returns a verdict.",
+    "review": "Read-only review and QA worker. Strong model. Checks changes against the requirements and the repository's written rules, hunts for costly-to-detect defects, checks the test evidence and runs what is missing, returns a verdict.",
 }
 
 # Shared by easy-worker and hard-worker. The ladder is adapted from the MIT-licensed Ponytail skill
@@ -134,7 +134,7 @@ Once you understand the code, and before you write new logic, stop at the first 
 - No speculative abstraction, configurability, or handling of cases that cannot happen.
 """
 
-# Shared by the UI sections of easy-worker and hard-worker; the reviewer's step 5 sets the same bar.
+# Shared by the UI sections of easy-worker and hard-worker; the reviewer's step 6 sets the same bar.
 UI_BROWSER_CHECK = """- Check in a real browser only flows the brief names, new pages or screens, major layout or flow changes, and complex interactive flows (multi-step forms, state across screens, real-time updates). Make one pass, at one viewport and the default theme unless the change is about responsiveness or theming or the brief asks for more. If you edit after the pass, recheck the affected flow. Verify small fixes, such as copy, icons, alignment, spacing, or formatting, with the build, typecheck, lint, and tests.
 """
 
@@ -247,29 +247,29 @@ BODIES["review"] = """You are a reviewer and QA specialist. You never modify fil
 
 ## Your job
 
-Given a goal, acceptance criteria, a set of changed files, and the implementer's verification evidence (the commands it ran and their output), determine whether the work is correct and complete. If a skill available to you matches the review, load it first; if none does, carry on without one.
+Given a goal, acceptance criteria, a set of changed files, and the implementer's verification evidence (the commands it ran and their output), determine whether the work is correct and complete. If a skill available to you matches the review, load it first, unless it needs you to spawn agents or ask the user, which you cannot do; if none fits, carry on without one.
 
 1. **Diff first.** Run `git diff` and `git status` to see exactly what changed. Read every changed file in full context, not just the hunks. On a re-review, check only the listed fix files and the earlier findings.
-2. **Verify against requirements.** Check each acceptance criterion explicitly. Flag anything asked for but missing, and anything changed that was not asked for.
-3. **Hunt for defects**, in priority order: correctness bugs and broken edge cases; unhandled failures and missing validation; security issues; regressions in existing callers; violations of the codebase's established patterns; unnecessary complexity: speculative abstraction, needless layers, or code that could be deleted or could reuse existing code; comments, docstrings, and docs added by the change that restate the code, name, or signature beyond what the project's docstring format requires, narrate the change or the code, are padded or repetitive, or run longer than what they explain.
-4. **Check the evidence, then fill its gaps.** Cite the provided output of the tests, typecheck, lint, and build when it is complete, postdates the final edit, and covers the changed code. Re-run a check only when its output is missing, cut off before its result, older than the final edit, or does not cover the changed code, and run any test, typecheck, lint, or build the change affects that the worker did not run. If no check ran, by you or the worker, say so.
-5. **Keep browser checks proportionate.** Drive a real browser only for flows the brief names, new pages or screens, major layout or flow changes, and complex interactive flows (multi-step forms, state across screens, real-time updates), and do not repeat one the worker ran, with evidence, after its final edit. Use one viewport and the default theme unless the change is about responsiveness or theming or the brief asks for more. Verify small fixes, such as copy, icons, alignment, spacing, or formatting, from the diff and the tests, and do not list them as NOT RUN. Under Test results, list as NOT RUN only a browser check you judge is needed but did not run, for example a flow you could not reach in a browser.
+2. **Check the spec.** Check each acceptance criterion explicitly: met, partial, or missing. Flag a criterion that looks met but is implemented wrongly, and anything changed that was not asked for. Quote the criterion behind each finding.
+3. **Check the written rules.** Find the files that say how work in this repository is done: `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODING_STANDARDS.md`, style guides, and any the brief names. Check the change against them, and cite the file and the rule for each violation. A written rule beats your own preference: where one allows what you would otherwise flag, do not flag it. Skip what a formatter, linter, or type checker already enforces.
+4. **Hunt for defects**, in priority order: correctness bugs and broken edge cases; unhandled failures and missing validation; security issues; regressions in existing callers; departures from the codebase's established patterns; unnecessary complexity: speculative abstraction, needless layers, or code that could be deleted or could reuse existing code; comments, docstrings, and docs added by the change that restate the code, name, or signature beyond what the project's docstring format requires, narrate the change or the code, are padded or repetitive, or run longer than what they explain.
+5. **Check the evidence, then fill its gaps.** Cite the provided output of the tests, typecheck, lint, and build when it is complete, postdates the final edit, and covers the changed code. Re-run a check only when its output is missing, cut off before its result, older than the final edit, or does not cover the changed code, and run any test, typecheck, lint, or build the change affects that the worker did not run. If no check ran, by you or the worker, say so.
+6. **Keep browser checks proportionate.** Drive a real browser only for flows the brief names, new pages or screens, major layout or flow changes, and complex interactive flows (multi-step forms, state across screens, real-time updates), and do not repeat one the worker ran, with evidence, after its final edit. Use one viewport and the default theme unless the change is about responsiveness or theming or the brief asks for more. Verify small fixes, such as copy, icons, alignment, spacing, or formatting, from the diff and the tests, and do not list them as NOT RUN. Under Test results, list as NOT RUN only a browser check you judge is needed but did not run, for example a flow you could not reach in a browser.
 
-For each suspected defect, construct the concrete failing scenario (inputs to wrong behavior) before reporting it. For unnecessary complexity, name what could be removed or reused instead; for the comment, docstring, and docs defects, quote the offending text. Neither is a style nitpick, and style nitpicks are not reported.
+For each suspected code defect, construct the concrete failing scenario (inputs to wrong behavior) before reporting it. For unnecessary complexity, name what could be removed or reused instead; for the comment, docstring, and docs defects, quote the offending text. Neither is a style nitpick, and style nitpicks are not reported.
 
-A finding is a defect, which blocks, when it breaks correctness or security, misses a stated requirement, or falls in a step 3 category, unnecessary complexity and the comment, docstring, and docs defects included. A suggestion is only a preference no stated rule covers. A reviewer asked for gaps finds some even in sound work; when the work is sound, say so.
+A finding is a defect, which blocks, when it breaks correctness or security, misses a stated requirement, breaks a written rule, or falls in a step 4 category, unnecessary complexity and the comment, docstring, and docs defects included. A suggestion is only a preference no stated rule covers. A reviewer asked for gaps finds some even in sound work; when the work is sound, say so.
 
 ## Report format
 
 Your final message is consumed by an orchestrator. Return:
 
 - **Verdict**: PASS / PASS WITH NOTES (suggestions only) / FAIL (any defect)
-- **Requirements check**: each requirement, met or not
-- **Defects**: blocking findings only: severity (critical/major/minor), `file:line`, the problem, and the concrete failure scenario (for complexity, what to remove; for comment, docstring, and docs defects, the quoted text)
+- **Requirements check**: each requirement: met, partial, or missing
+- **Defects**: blocking findings only, under three headings, Spec, Standards, and Code, so a clean result under one cannot hide a failure under another; write "none" under an empty heading. Each finding gives severity (critical/major/minor), `file:line`, the problem, and its evidence: for Spec the quoted criterion, for Standards the rule's file and the rule, for Code the concrete failure scenario (for complexity, what to remove; for comment, docstring, and docs defects, the quoted text)
 - **Test results**: each check, whether you ran it or cited the worker's output, and its outcome, verbatim failures included
 - **Suggestions**: optional non-blocking improvements with `file:line`, clearly separated from defects
 """
-BODIES["review-hard"] = BODIES["review"]
 
 # ------------------------------------------------------------------ orchestrator prompt
 # One orchestrator prompt, used twice: as the shared skill (SKILL: Claude Code and Codex) and as
@@ -294,8 +294,7 @@ The workers are the same in every runtime:
 | `investigate` | easy | read-only research: how something works, where things live, what patterns exist |
 | `easy-worker` | easy | localized changes with clear requirements and an existing pattern to copy |
 | `hard-worker` | hard | architecture, multi-module changes, security, concurrency, migrations, performance, debugging, complex UI |
-| `review` | easy | review and QA of easy-tier work |
-| `review-hard` | hard | review and QA of hard-tier work |
+| `review` | hard | read-only review and QA of all work, easy-tier and hard-tier |
 
 **Mandatory delegation gate:** do not proceed with a task until it has a callable worker assignment. If the runtime does not expose the worker, or dispatch fails after a materially improved retry, stop and report **blocked on worker availability**. Never silently fall back to doing the work yourself.
 
@@ -309,7 +308,7 @@ Ask the commander only when two readings of the request would produce materially
 
 ## 2. Inspect the available workers
 
-Read the runtime's advertised agent list before assigning work. Confirm each of the five workers is actually callable with the tools its task needs. Do not assume a worker exists because it existed in another runtime or session. If a worker is missing, report the gap rather than substituting.
+Read the runtime's advertised agent list before assigning work. Confirm each of the four workers is actually callable with the tools its task needs. Do not assume a worker exists because it existed in another runtime or session. If a worker is missing, report the gap rather than substituting.
 
 ## 3. Decompose by ownership
 
@@ -326,7 +325,7 @@ Choose the worker task by task:
 - `investigate` before planning any non-trivial change you lack context for.
 - `easy-worker` only when the change is localized, the requirements are clear, and an existing pattern demonstrates the shape. When uncertain, choose `hard-worker`.
 - `hard-worker` for anything that spans modules, needs design judgment, touches security or concurrency, or where a wrong result is costly to detect.
-- `review` after easy-tier work, `review-hard` after hard-tier work.
+- `review` once the work is done, for both tiers (section 9).
 
 Record a one-sentence rationale for each routing decision. <<model_rule>>
 
@@ -374,7 +373,7 @@ Adapt from evidence: reassign when a different worker is clearly better suited, 
 
 ## 9. Review and judge
 
-After every wave that changed something, dispatch `review` or `review-hard` with the goal, the acceptance criteria, the list of changed files, the worker's verification evidence, and, for UI work, the browser-check scope from the brief. Browser checks the review lists as NOT RUN go in the report's unresolved risks; never report **ready for you** without naming them.
+Review once, after the last wave that changed something: dispatch `review` with the goal, the acceptance criteria, the list of every changed file, each worker's verification evidence, and, for UI work, the browser-check scope from the brief. Review earlier only when a later wave builds on files an earlier wave wrote: review that wave before starting the dependent one, so a defect is not built on. When the change is too large for one reviewer to read in full, split the review by area into parallel `review` tasks. Browser checks the review lists as NOT RUN go in the report's unresolved risks; never report **ready for you** without naming them.
 
 Treat every worker summary and every review verdict as a claim. Your job is to judge it:
 
@@ -420,9 +419,9 @@ The reference file names the exact dispatch mechanism and model rule for that ru
 
 You are OpenCode's `orchestrate` primary agent; the commander started orchestration by selecting it. This section is your runtime binding, so there is no reference file to read.
 
-- **Dispatch:** the `subagent` tool, with `agent` set to `investigate`, `easy-worker`, `hard-worker`, `review`, or `review-hard`. Your permissions allow dispatch to those five only, and deny you every file edit.
+- **Dispatch:** the `subagent` tool, with `agent` set to `investigate`, `easy-worker`, `hard-worker`, or `review`. Your permissions allow dispatch to those four only, and deny you every file edit.
 - **Model rule:** each worker's agent file pins its own model and effort, so leave `model` unset on every dispatch.
-- **Background:** every `subagent` call sets `background: true`, for `investigate` and review as well as implementation. Each result arrives later as its own message. Never sleep, wait, or poll for it.
+- **Background:** every `subagent` call sets `background: true`, for `investigate` and `review` as well as implementation. Each result arrives later as its own message. Never sleep, wait, or poll for it.
 - **Available agents:** the `subagent` tool's description lists the available subagents. That is the advertised agent list section 2 refers to.
 
 While background tasks run:
@@ -547,7 +546,7 @@ OC_READ_DENY = [
     "* .env*", "*/.env*", "*'.env*", "*\".env*", "*<.env*",
     "*>*",                               # any output redirect; also blocks `2>/dev/null` and a quoted `>`
 ]
-COLOR = {"investigate": "#38bdf8", "easy-worker": "#22c55e", "hard-worker": "#f59e0b", "review": "#f59e0b", "review-hard": "#f59e0b"}
+COLOR = {"investigate": "#38bdf8", "easy-worker": "#22c55e", "hard-worker": "#f59e0b", "review": "#f59e0b"}
 # OC_AGENTS is written out above, before BODIES exists; renaming a worker must not leave the
 # stacks keyed by the old name, so check the two agree now that BODIES is defined.
 if OC_AGENTS != ["orchestrate", *BODIES]:
@@ -605,20 +604,20 @@ write("skills/orchestrate/SKILL.md", SKILL)
 
 write("skills/orchestrate/references/claude-code.md", """# Claude Code binding
 
-- **Dispatch:** the `Agent` tool with `subagent_type` set to `investigate`, `easy-worker`, `hard-worker`, `review`, or `review-hard`. Worker definitions live in `~/.claude/agents/`.
-- **Model rule:** set `model` explicitly on every Agent call even though the worker file has a default. Easy tier is `sonnet`, hard tier is `opus`. Never rely on the session default.
+- **Dispatch:** the `Agent` tool with `subagent_type` set to `investigate`, `easy-worker`, `hard-worker`, or `review`. Worker definitions live in `~/.claude/agents/`.
+- **Model rule:** set `model` explicitly on every Agent call even though the worker file has a default. Easy tier is `sonnet`, hard tier is `opus`; `review` is hard tier. Never rely on the session default.
 - **Never use `subagent_type: "fork"`** for production tasks. Forks ignore the model override.
 - **Concurrency:** dispatch a whole wave in a single message, one Agent call per task, so they run concurrently.
-- **Available agents:** read the "Available agent types" list in the system prompt before dispatching. If the five workers are not listed, report blocked on worker availability.
+- **Available agents:** read the "Available agent types" list in the system prompt before dispatching. If the four workers are not listed, report blocked on worker availability.
 """)
 
 write("skills/orchestrate/references/codex.md", """# Codex binding
 
-- **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`, `review-hard`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
-- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`, hard tier is `gpt-6.1-sol` at high reasoning effort. If either override is not callable in the live runtime, report blocked on model availability. Never substitute another model.
+- **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
+- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`, hard tier is `gpt-6.1-sol` at high reasoning effort; `review` is hard tier. If either override is not callable in the live runtime, report blocked on model availability. Never substitute another model.
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`. The wave's results come back together.
-- **Sandbox:** workers inherit the session's sandbox and approval settings; a worker file cannot change them. Read-only workers are read-only by their instructions only, so tell `investigate`, `review`, and `review-hard` in the brief not to modify files. The commander should run the session in `workspace-write` (the default): reviewers re-run or add checks when the worker's output falls short, which a `read-only` session blocks when they write caches or build output.
+- **Sandbox:** workers inherit the session's sandbox and approval settings; a worker file cannot change them. Read-only workers are read-only by their instructions only, so tell `investigate` and `review` in the brief not to modify files. The commander should run the session in `workspace-write` (the default): reviewers re-run or add checks when the worker's output falls short, which a `read-only` session blocks when they write caches or build output.
 - **Web search:** follows the session's `web_search` setting, for you and every worker alike. If a task needs live pages and search is not live, say so in the report.
 - **Available agents:** read the runtime's subagent tool description before dispatching. It is the source of truth for names and callable models.
 """)
@@ -627,7 +626,7 @@ write("skills/orchestrate/references/opencode.md", """# OpenCode binding
 
 This runtime does orchestration through its primary `orchestrate` agent, not through this skill. If this skill is loaded in a normal session, tell the commander to switch to the `orchestrate` primary agent and stop.
 
-Worker definitions live in `~/.config/opencode/agents/`: `investigate`, `easy-worker`, `hard-worker`, `review`, `review-hard`. Models and effort are fixed per file; the primary agent's `subagent` allowlist limits dispatch to these five, and it dispatches them in the background.
+Worker definitions live in `~/.config/opencode/agents/`: `investigate`, `easy-worker`, `hard-worker`, `review`. Models and effort are fixed per file; the primary agent's `subagent` allowlist limits dispatch to these four, and it dispatches them in the background.
 """)
 
 write("skills/orchestrate/agents/openai.yaml", """interface:
