@@ -1,7 +1,7 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: opencode/deepseek-v4.1-flash-free
+model: opencode/deepseek-v4.1-flash-free#max
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: allow }

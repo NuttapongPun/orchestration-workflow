@@ -1,7 +1,7 @@
 ---
 description: Read-only review and QA worker. Strong model. Checks changes against the requirements and the repository's written rules, hunts for costly-to-detect defects, checks the test evidence and runs what is missing, returns a verdict.
 mode: subagent
-model: opencode/deepseek-v4.1-flash-free
+model: opencode/deepseek-v4.1-flash-free#max
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: deny }

@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies non-trivial results through review before finishing
 mode: primary
-model: opencode/deepseek-v4.1-flash-free
+model: opencode/deepseek-v4.1-flash-free#high
 color: "#a78bfa"
 permissions:
   - { action: edit, resource: "*", effect: deny }

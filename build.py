@@ -46,7 +46,7 @@ def model_for(runtime, agent):
 #   ./install.sh --opencode-stack=<name>        (default: free)
 #
 # A stack is one entry per OpenCode agent: {"model": "<provider/model>", "effort": <level>},
-# where <level> is "low", "medium", "high", or None. OpenCode 2 has no effort field; the level
+# where <level> is "low", "medium", "high", "max", or None. OpenCode 2 has no effort field; the level
 # is written as the model's variant, `model: <provider/model>#<level>`, and None writes the
 # bare model (for a model that has no effort variants). Model and effort are independent per
 # agent, so `investigate` can differ from the other easy-tier agents.
@@ -82,22 +82,28 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
         per_agent = {a: effort for a in OC_AGENTS}
     return {a: {"model": model[a], "effort": per_agent[a]} for a in OC_AGENTS}
 
-# The `free` stack uses only the Zen models whose provider keeps zero retention and does not
-# train on your data (DeepSeek V4.1 Flash, GLM-5.3-Flash). Other free Zen models, with known problems:
+# The `free` stack uses only Zen models whose provider keeps zero retention and does not train on
+# your data: DeepSeek V4.1 Flash at max effort for hard-worker and review (Artificial Analysis
+# engineering 37.6 and Terminal-Bench 4.0 33.8%, ahead of MiniMax M3.1 Flash and GLM-5.3-Flash) and
+# at high for orchestrate, and MiniMax M3.1 Flash at medium for the easy tier. Zen offers DeepSeek
+# V4.1 Flash only low/high/max.
+# The other zero-retention free models: opencode/glm-5.3-flash-free (close in score but slow, about
+# 47 tokens/s) and opencode/longcat-2.5-free (hosted in China, 100 requests per day).
+# Other free Zen models, with known problems:
 #   opencode/mimo-v2.6-flash-free, opencode/nemotron-3.5-lightning-free, opencode/nemotron-3.5-super-vl-free,
-#   opencode/nemotron-3-ultra-free, opencode/flint-40b-free (provider uses your data to improve the model),
+#   opencode/flint-40b-free (provider uses your data to improve the model),
 #   opencode/inkling-2-small-free (provider retains your data and may train on it),
 #   opencode/beam-free (passed the orchestration probe, but its provider retains data for 30 days),
-#   opencode/big-pickle, opencode/iceman-free, opencode/crouton-alpha-free (unnamed stealth models
-#   that use your data; Big Pickle also has many reports of corrupted output).
+#   opencode/big-pickle, opencode/iceman-free (unnamed stealth models that use your data; Big Pickle
+#   also has many reports of corrupted output).
 # The DeepSeek models in cheap-openrouter offer only low/high/max effort, so the usual medium
 # rounds up to high (easy-worker) and orchestrate is raised from low to high on purpose.
 # MiMo V2.6 Pro on OpenRouter offers no effort levels, so hard-worker and review carry None.
 # Anthropic IDs use dashes in the version (claude-opus-5-5); OpenRouter IDs use dots (claude-opus-5.5).
 OPENCODE_STACKS = {
-    # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
-    # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
-    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/deepseek-v4.1-flash-free", "opencode/glm-5.3-flash-free", effort=None),
+    # Free OpenCode Zen models; the installer's default stack.
+    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/deepseek-v4.1-flash-free", "opencode/minimax-m3.1-flash-free",
+                                  effort={"orchestrate": "high", "investigate": "medium", "easy-worker": "medium", "hard-worker": "max", "review": "max"}),
     "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6.1-terra", effort={"orchestrate": "high"}),
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6.1-sol",            "openrouter/openai/gpt-6.1-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
     "claude":            oc_stack("anthropic/claude-fable-5-2",             "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5",
@@ -112,7 +118,7 @@ OPENCODE_STACKS["openai-openrouter"]["hard-worker"]["model"] = "openrouter/opena
 # As in Claude Code: review runs Fable, above hard-worker's Opus.
 OPENCODE_STACKS["claude"]["review"]["model"] = "anthropic/claude-fable-5-2"
 
-OC_EFFORT_LEVELS = ("low", "medium", "high", None)
+OC_EFFORT_LEVELS = ("low", "medium", "high", "max", None)
 for _stack, _spec in OPENCODE_STACKS.items():
     _missing = [a for a in OC_AGENTS if a not in _spec]
     _extra = [a for a in _spec if a not in OC_AGENTS]
@@ -126,7 +132,7 @@ for _stack, _spec in OPENCODE_STACKS.items():
             raise SystemExit(f"OPENCODE_STACKS['{_stack}']['{_agent}']['model']: expected a non-empty provider/model string, got {_entry['model']!r}")
         if _entry["effort"] not in OC_EFFORT_LEVELS:
             raise SystemExit(f"OPENCODE_STACKS['{_stack}']['{_agent}']['effort']: expected one of "
-                             f"'low', 'medium', 'high' or None, got {_entry['effort']!r}")
+                             f"'low', 'medium', 'high', 'max' or None, got {_entry['effort']!r}")
 
 # ------------------------------------------------------------------ prompts
 DESC = {

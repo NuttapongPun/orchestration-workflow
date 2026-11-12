@@ -24,8 +24,8 @@ The same four workers exist in every runtime, with identical prompts. Only the m
 
 | Worker | Tier | Claude Code | Codex | OpenCode\* |
 |---|---|---|---|---|
-| `investigate` | easy, read-only | sonnet | gpt-6.1-terra | glm-5.3-flash-free |
-| `easy-worker` | easy | sonnet | gpt-6.1-terra | glm-5.3-flash-free |
+| `investigate` | easy, read-only | sonnet | gpt-6.1-terra | minimax-m3.1-flash-free |
+| `easy-worker` | easy | sonnet | gpt-6.1-terra | minimax-m3.1-flash-free |
 | `hard-worker` | hard | opus | gpt-6.1-terra | deepseek-v4.1-flash-free |
 | `review` | hard, read-only | fable | gpt-6.1-sol | deepseek-v4.1-flash-free |
 
@@ -129,9 +129,9 @@ Your session's model plays the orchestrator, so pick the strongest one available
 |---|---|---|
 | Claude Code | Fable 5.2, medium effort | `/model` |
 | Codex | GPT-6.1 Sol, high reasoning effort | `/model` |
-| OpenCode | DeepSeek V4.1 Flash on the default `free` stack | The installed stack sets the `orchestrate` agent's model and effort. See [OpenCode model stacks](#opencode-model-stacks). |
+| OpenCode | DeepSeek V4.1 Flash, high effort, on the default `free` stack | The installed stack sets the `orchestrate` agent's model and effort. See [OpenCode model stacks](#opencode-model-stacks). |
 
-Give this role the best judgment you can afford. A weak orchestrator sends tasks to the wrong worker and accepts weak review verdicts. Fast, cheap models belong underneath it, doing the work. That is why the default `free` stack runs GLM-5.3-Flash as its easy workers, under a DeepSeek V4.1 Flash orchestrator.
+Give this role the best judgment you can afford. A weak orchestrator sends tasks to the wrong worker and accepts weak review verdicts. Fast, cheap models belong underneath it, doing the work. That is why the default `free` stack runs MiniMax M3.1 Flash as its easy workers, under a DeepSeek V4.1 Flash orchestrator.
 
 ## OpenCode model stacks
 
@@ -157,22 +157,22 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 
 Installing a different stack replaces the five installed OpenCode agent files. The installer asks first unless you pass `--yes`. Start a fresh session afterwards. Every stack except `free` needs its provider linked first with `opencode auth login`.
 
-The table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`. Model IDs use OpenCode's `provider/model` form, as `opencode models` prints them. A `#low`, `#medium`, or `#high` suffix is the effort level. A model with no suffix runs at its provider's default, because OpenCode offers no effort levels for it.
+The table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`. Model IDs use OpenCode's `provider/model` form, as `opencode models` prints them. A `#low`, `#medium`, `#high`, or `#max` suffix is the effort level. A model with no suffix runs at its provider's default, because OpenCode offers no effort levels for it.
 
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
-| `orchestrate` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `investigate` | `opencode/glm-5.3-flash-free` | `openai/gpt-6.1-terra#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/deepseek/deepseek-v4.1-flash-1017#low` |
-| `easy-worker` | `opencode/glm-5.3-flash-free` | `openai/gpt-6.1-terra#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
-| `hard-worker` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-terra#high` | `openrouter/openai/gpt-6.1-terra#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
-| `review` | `opencode/deepseek-v4.1-flash-free` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
+| `orchestrate` | `opencode/deepseek-v4.1-flash-free#high` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
+| `investigate` | `opencode/minimax-m3.1-flash-free#medium` | `openai/gpt-6.1-terra#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/deepseek/deepseek-v4.1-flash-1017#low` |
+| `easy-worker` | `opencode/minimax-m3.1-flash-free#medium` | `openai/gpt-6.1-terra#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
+| `hard-worker` | `opencode/deepseek-v4.1-flash-free#max` | `openai/gpt-6.1-terra#high` | `openrouter/openai/gpt-6.1-terra#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
+| `review` | `opencode/deepseek-v4.1-flash-free#max` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
 
 Rough cost per million tokens, from OpenRouter list prices in November 2026:
 
 | Model | Input | Output |
 |---|---|---|
-| DeepSeek V4.1 Flash and GLM-5.3-Flash, free on OpenCode Zen† | $0 | $0 |
+| DeepSeek V4.1 Flash and MiniMax M3.1 Flash, free on OpenCode Zen† | $0 | $0 |
 | GPT-6.1 Sol | $2 | $10 |
 | GPT-6.1 Terra | $1 | $5 |
 | GPT-6 Luna | $0.10 | $0.50 |
@@ -185,7 +185,7 @@ Rough cost per million tokens, from OpenRouter list prices in November 2026:
 
 The DeepSeek prices are off-peak. At peak, weekdays 01:00-04:00 and 06:00-10:00 UTC, DeepSeek charges double, and OpenRouter passes the peak price through. V4 Pro then costs $1.32 in and $3.96 out, and V4.1 Flash costs $0.30 in and $1.20 out.
 
-† **Free-tier terms.** OpenCode Zen's docs say the providers of both free models follow a zero-retention policy and do not use your data for training. Most other free Zen models use what they see to improve the model, so check the [Zen docs](https://opencode.ai/docs/zen/) before you swap one in. Both are free for a limited time, and the three DeepSeek agents share one free endpoint's rate limits.
+† **Free-tier terms.** OpenCode Zen's docs say the providers of both free models follow a zero-retention policy and do not use your data for training. Most other free Zen models use what they see to improve the model, so check the [Zen docs](https://opencode.ai/docs/zen/) before you swap one in. Both are free for a limited time. The docs state no rate limit for either, but Zen may throttle free use.
 
 The `free` stack costs nothing, but its models are weaker. Read the review verdicts yourself.
 
