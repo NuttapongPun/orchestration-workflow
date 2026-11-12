@@ -10,8 +10,8 @@
   "expected_behavior": [
     "Asks no questions: the request is clear, so section 1's questions do not apply",
     "Routes the change to easy-worker with a one-sentence rationale (localized, clear, existing pattern)",
-    "Sets the model explicitly on every dispatch: easy tier sonnet, hard tier opus (Claude Code)",
-    "Dispatches review once after the change, on the hard-tier model (opus): a new function changes behavior, so the change is not trivial",
+    "Sets the model explicitly on every dispatch: investigate and easy-worker sonnet, hard-worker opus, review fable (Claude Code)",
+    "Dispatches review once after the change, on the strongest model (fable): a new function changes behavior, so the change is not trivial",
     "Does not stop at the plan gate: nothing is destructive, there is no hard-tier task, and no plan was asked for",
     "Never edits greetings.py itself; the change in the fixture comes from the worker",
     "Reports once, saying whether it is ready for you or blocked on you"

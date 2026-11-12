@@ -1,8 +1,8 @@
 ---
 name: review
 description: Read-only review and QA worker. Strong model. Checks changes against the requirements and the repository's written rules, hunts for costly-to-detect defects, checks the test evidence and runs what is missing, returns a verdict.
-model: opus
-effort: high
+model: fable
+effort: medium
 tools: Read, Grep, Glob, Bash, Skill
 ---
 

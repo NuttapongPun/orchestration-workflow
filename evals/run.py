@@ -37,9 +37,8 @@ REPO = EVALS.parent
 HOME = Path.home().resolve()
 
 WORKERS = ["investigate", "easy-worker", "hard-worker", "review"]
-TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "hard"}
-# Claude Code binding (skills/orchestrate/references/claude-code.md): easy tier sonnet, hard tier opus.
-CLAUDE_TIER_MODEL = {"easy": "sonnet", "hard": "opus"}
+# Claude Code binding (skills/orchestrate/references/claude-code.md).
+CLAUDE_WORKER_MODEL = {"investigate": "sonnet", "easy-worker": "sonnet", "hard-worker": "opus", "review": "fable"}
 
 # Built-in tools the session gets. No tool that runs commands or code, and no web tool,
 # so no process in a run can execute a shell command. Workers keep Read/Grep/Glob/Edit/Write.
@@ -58,7 +57,7 @@ DEFAULT_ASSERT = {
     "forbidden_tools": ["Edit", "Write", "NotebookEdit", "MultiEdit", "Bash"],
     # Only the four workers; this also catches subagent_type "fork" and a general-purpose fallback.
     "allowed_subagent_types": list(WORKERS),
-    # Every dispatch sets `model` explicitly, to the worker's tier model.
+    # Every dispatch sets `model` explicitly, to the worker's model.
     "model_set": True,
 }
 
@@ -632,8 +631,8 @@ def evaluate(assertions, parsed, before, after, work):
     if a["model_set"] and parsed["dispatches"]:
         wrong = []
         for d in parsed["dispatches"]:
-            if d["type"] in TIER:
-                want = CLAUDE_TIER_MODEL[TIER[d["type"]]]
+            if d["type"] in CLAUDE_WORKER_MODEL:
+                want = CLAUDE_WORKER_MODEL[d["type"]]
                 if not d["model"] or want not in str(d["model"]).lower():
                     wrong.append(f"{d['type']}:model={d['model']!r} (want {want})")
         checks.append(("model_set", not wrong, "; ".join(wrong)))

@@ -45,7 +45,7 @@ Every turn of every scenario also checks three invariants, unless the scenario o
 
 - the orchestrator itself never calls `Edit`, `Write`, `NotebookEdit`, `MultiEdit` or `Bash` (calls made inside a worker are not counted)
 - every dispatch is to one of the four workers, so `subagent_type: "fork"` or a `general-purpose` fallback fails
-- every dispatch sets `model` to its tier: `sonnet` for easy, `opus` for hard
+- every dispatch sets `model` to its worker's model: `sonnet` for `investigate` and `easy-worker`, `opus` for `hard-worker`, `fable` for `review`
 
 ## Read the results
 
@@ -60,7 +60,7 @@ scenario                   mode   verdict  dispatches (type:model)  cost   faile
 
 Four preconditions are checked first, so a broken setup cannot pass as a good result: `session_started` (the stream has a `system/init` event), `skill_listed` (the session listed `orchestrate`; the stream does not show the expansion itself, so this checks the listing, not the invocation), `workers_listed` (all four workers were in the session's agent list, minus any the scenario denies), and `agent_tool_available`. If one of these fails, fix the install before reading anything else.
 
-**Dispatches.** In `-p` mode Claude Code runs each Agent call in the background: the call returns at once with "Async agent launched", and the worker's outcome arrives later as a `system/task_notification` with the same `tool_use_id`. A dispatch counts as done only when that notification says `completed`; a synchronous call counts when its result is not an error. The table marks any other dispatch with its state, for example `review:opus(launched, never finished)` or `easy-worker:sonnet(error/denied)`. `dispatches` and `dispatches_in_order` count only finished dispatches, because they claim the work was done. The checks on the orchestrator's decisions (`only_dispatch`, `not_dispatched`, `no_dispatch`, `allowed_subagent_types`, `model_set`) count every attempt, because a denied or crashed call to the wrong worker was still the wrong call.
+**Dispatches.** In `-p` mode Claude Code runs each Agent call in the background: the call returns at once with "Async agent launched", and the worker's outcome arrives later as a `system/task_notification` with the same `tool_use_id`. A dispatch counts as done only when that notification says `completed`; a synchronous call counts when its result is not an error. The table marks any other dispatch with its state, for example `review:fable(launched, never finished)` or `easy-worker:sonnet(error/denied)`. `dispatches` and `dispatches_in_order` count only finished dispatches, because they claim the work was done. The checks on the orchestrator's decisions (`only_dispatch`, `not_dispatched`, `no_dispatch`, `allowed_subagent_types`, `model_set`) count every attempt, because a denied or crashed call to the wrong worker was still the wrong call.
 
 Each run writes `evals/results/<time>-<runtime>-<model>/` (git-ignored): the raw stream-json transcript of every turn, any stderr, and `summary.json` with every dispatch, every check, and the final message. When a verdict surprises you, read the transcript, not just the table. The checks are regexes and lists; `expected_behavior` in each scenario file is the full rubric to judge the transcript against.
 
@@ -130,7 +130,7 @@ Copy a file in `scenarios/` and change it. The shape is the guide's evaluation s
 | `dispatches` / `dispatches_in_order` | these workers were dispatched and finished (in this order) |
 | `only_dispatch` | every dispatch, even a failed one, was to one of these |
 | `not_dispatched` | none of these was dispatched, even unsuccessfully |
-| `model_set` | every dispatch set `model` to its tier (default on) |
+| `model_set` | every dispatch set `model` to its worker's model (default on) |
 | `allowed_subagent_types` | dispatches only to these (default: the four workers) |
 | `forbidden_tools` | the orchestrator itself never called these (default: Edit, Write, NotebookEdit, MultiEdit, Bash) |
 | `final_text_regex` / `final_text_not_regex` | case-insensitive regexes on the turn's final message, with `*` and backticks stripped. Every scenario writes the gate as `blocked on you\W+approve the (\w+ )?plan`, so "approve the amended plan" also matches |

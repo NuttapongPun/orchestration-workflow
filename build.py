@@ -19,19 +19,23 @@ ROOT = pathlib.Path(__file__).resolve().parent
 # One reviewer, on the hard tier, for all non-trivial work: an easy-tier reviewer was rarely the right call.
 TIER = {"investigate": "easy", "easy-worker": "easy", "hard-worker": "hard", "review": "hard"}
 READONLY = {"investigate", "review"}
-EFFORT = {"investigate": "medium", "easy-worker": "medium", "hard-worker": "high", "review": "high"}
-# Codex only: investigate runs at low effort, tuned for ChatGPT subscription limits, where
+# Effort per worker, one table per runtime. OpenCode uses neither; its effort is set per agent
+# in OPENCODE_STACKS below.
+# Claude Code: on Artificial Analysis's FrontierCode-AA 2.0, Fable 5.2 at medium beats Opus 5.5 at high for
+# about the same cost per task, and above medium Fable costs several times more.
+EFFORT_CLAUDE = {"investigate": "high", "easy-worker": "high", "hard-worker": "high", "review": "medium"}
+# Codex: investigate runs at low effort, tuned for ChatGPT subscription limits, where
 # reasoning tokens count against the 5-hour window.
-# OpenCode does not use this table; its effort is set per agent in OPENCODE_STACKS below.
-EFFORT_OPENAI = {**EFFORT, "investigate": "low"}
+EFFORT_OPENAI = {"investigate": "low", "easy-worker": "medium", "hard-worker": "high", "review": "high"}
 
 MODELS = {
     "claude":      {"easy": "sonnet",      "hard": "opus"},
-    "codex":       {"easy": "gpt-6-luna",  "hard": "gpt-6.1-sol"},
+    "codex":       {"easy": "gpt-6.1-terra", "hard": "gpt-6.1-sol"},
 }
-# Per-agent exceptions to the tier model. Codex's hard-worker runs GPT-6.1 Terra (half Sol's price,
-# faster); review stays on Sol, so the final check keeps the strongest model.
-MODEL_OVERRIDES = {"codex": {"hard-worker": "gpt-6.1-terra"}}
+# Per-agent exceptions to the tier model, so the final check runs on the strongest model.
+# Claude Code: review runs Fable, above hard-worker's Opus. Codex: hard-worker runs GPT-6.1 Terra
+# (half Sol's price, faster), like the easy workers but at high effort; review stays on Sol.
+MODEL_OVERRIDES = {"claude": {"review": "fable"}, "codex": {"hard-worker": "gpt-6.1-terra"}}
 
 def model_for(runtime, agent):
     return MODEL_OVERRIDES.get(runtime, {}).get(agent, MODELS[runtime][TIER[agent]])
@@ -94,9 +98,10 @@ OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack. Effort is None on every agent:
     # it is unverified which effort variants OpenCode Zen offers for these, so none is named.
     "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/deepseek-v4.1-flash-free", "opencode/glm-5.3-flash-free", effort=None),
-    "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6-luna", effort={"orchestrate": "high"}),
+    "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6.1-terra", effort={"orchestrate": "high"}),
     "openai-openrouter": oc_stack("openrouter/openai/gpt-6.1-sol",            "openrouter/openai/gpt-6.1-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
-    "claude":            oc_stack("anthropic/claude-opus-5-5",              "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5"),
+    "claude":            oc_stack("anthropic/claude-fable-5-2",             "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5",
+                                  effort={"orchestrate": "medium", "investigate": "high", "easy-worker": "high", "review": "medium"}),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
     "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/xiaomi/mimo-v2.6-pro", "openrouter/deepseek/deepseek-v4.1-flash-1017",
                                   effort={"orchestrate": "high", "easy-worker": "high", "hard-worker": None, "review": None}),
@@ -104,6 +109,8 @@ OPENCODE_STACKS = {
 # As in Codex (MODEL_OVERRIDES): hard-worker runs GPT-6.1 Terra, review stays on Sol.
 OPENCODE_STACKS["openai"]["hard-worker"]["model"] = "openai/gpt-6.1-terra"
 OPENCODE_STACKS["openai-openrouter"]["hard-worker"]["model"] = "openrouter/openai/gpt-6.1-terra"
+# As in Claude Code: review runs Fable, above hard-worker's Opus.
+OPENCODE_STACKS["claude"]["review"]["model"] = "anthropic/claude-fable-5-2"
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", None)
 for _stack, _spec in OPENCODE_STACKS.items():
@@ -557,7 +564,7 @@ def write(rel, text):
 
 # ------------------------------------------------------------------ Claude Code
 for n, body in BODIES.items():
-    fm = [f"name: {n}", f"description: {DESC[n]}", f"model: {model_for('claude', n)}", f"effort: {EFFORT[n]}"]
+    fm = [f"name: {n}", f"description: {DESC[n]}", f"model: {model_for('claude', n)}", f"effort: {EFFORT_CLAUDE[n]}"]
     if n == "investigate":
         fm.append("tools: Read, Grep, Glob, Bash, WebFetch, WebSearch, Skill")
     elif n in READONLY:
@@ -637,7 +644,7 @@ write("skills/orchestrate/SKILL.md", SKILL)
 write("skills/orchestrate/references/claude-code.md", """# Claude Code binding
 
 - **Dispatch:** the `Agent` tool with `subagent_type` set to `investigate`, `easy-worker`, `hard-worker`, or `review`. Worker definitions live in `~/.claude/agents/`.
-- **Model rule:** set `model` explicitly on every Agent call even though the worker file has a default. Easy tier is `sonnet`, hard tier is `opus`; `review` is hard tier. Never rely on the session default.
+- **Model rule:** set `model` explicitly on every Agent call even though the worker file has a default. Set `investigate` and `easy-worker` to `sonnet`, `hard-worker` to `opus`, and `review` to `fable`. Never rely on the session default.
 - **Never use `subagent_type: "fork"`** for production tasks. Forks ignore the model override.
 - **Concurrency:** dispatch a whole wave in a single message, one Agent call per task, so they run concurrently.
 - **Available agents:** read the "Available agent types" list in the system prompt before dispatching. If the four workers are not listed, report blocked on worker availability.
@@ -646,7 +653,7 @@ write("skills/orchestrate/references/claude-code.md", """# Claude Code binding
 write("skills/orchestrate/references/codex.md", """# Codex binding
 
 - **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
-- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. Easy tier is `gpt-6-luna`. Hard tier is `gpt-6.1-sol` at high reasoning effort, except `hard-worker`, which runs `gpt-6.1-terra` at high reasoning effort; `review` is hard tier and runs `gpt-6.1-sol`. If any of these models is not callable in the live runtime, report blocked on model availability. Never substitute another model.
+- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. `investigate`, `easy-worker`, and `hard-worker` run `gpt-6.1-terra`, at low, medium, and high reasoning effort respectively. `review` runs `gpt-6.1-sol` at high reasoning effort. If any of these models is not callable in the live runtime, report blocked on model availability. Never substitute another model.
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`. The wave's results come back together.
 - **Sandbox:** workers inherit the session's sandbox and approval settings; a worker file cannot change them. Read-only workers are read-only by their instructions only, so tell `investigate` and `review` in the brief not to modify files. The commander should run the session in `workspace-write` (the default): reviewers re-run or add checks when the worker's output falls short, which a `read-only` session blocks when they write caches or build output.

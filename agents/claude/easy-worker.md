@@ -2,7 +2,7 @@
 name: easy-worker
 description: Cheap worker for simple, localized tasks with clear requirements and an existing pattern to follow. Code, config, docs, or content.
 model: sonnet
-effort: medium
+effort: high
 disallowedTools: Agent
 ---
 

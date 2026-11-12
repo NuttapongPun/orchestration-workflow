@@ -2,7 +2,7 @@
 name: investigate
 description: Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live.
 model: sonnet
-effort: medium
+effort: high
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch, Skill
 ---
 
