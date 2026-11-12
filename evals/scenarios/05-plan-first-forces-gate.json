@@ -8,6 +8,7 @@
     "fixtures/pyapp"
   ],
   "expected_behavior": [
+    "Asks no clarifying questions first: the request is clear; 'plan first' asks for the plan gate, not for questions",
     "Stops and reports 'blocked on you: approve the plan' even though the change is small and easy-tier",
     "Names the triggering condition: the commander asked for a plan",
     "Plans easy-worker for the change and review after it",

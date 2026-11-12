@@ -8,7 +8,7 @@
     "fixtures/pyapp"
   ],
   "expected_behavior": [
-    "Turn 1: stops at the plan gate ('plan first')",
+    "Turn 1: stops at the plan gate ('plan first') without clarifying questions: the request is clear",
     "Turn 2: treats the amendment and question as not a go, per the rule 'Answers to your questions, amendments, and discussion are not a go'",
     "Turn 2: applies the amendment (keep greet_en as an alias), answers or investigates the question, re-reports the changed plan, and waits for an explicit go",
     "No writing worker runs in either turn, and the fixture is untouched"

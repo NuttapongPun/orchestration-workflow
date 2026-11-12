@@ -38,6 +38,8 @@ Testing: /Users/you/.agents/skills/orchestrate/SKILL.md  (via /Users/you/.claude
 | `05-plan-first-forces-gate` | Scenario 02's request, prefixed "Plan first:" | the phrase alone forces the gate |
 | `06-amendment-is-not-a-go` | Two turns: "plan first" rename, then an amendment plus a question | turn 2 is not treated as approval: it re-reports the gate with the amendment (**blocked on you: approve the plan** again) and waits; no writing worker in either turn |
 | `07-missing-worker-blocks` | Scenario 02's request with `easy-worker` and `hard-worker` denied | reports **blocked on worker availability**; does not do the work itself or through another agent type |
+| `08-trivial-change-skips-review` | Fix the typo "langauge" in `docs/usage.md` | `easy-worker` fixes it, no `review` (review covers only non-trivial work), no plan gate, the report says the change was not reviewed, and the typo is gone from the fixture |
+| `09-unclear-request-grills` | Change what `greet()` does for an unsupported language | asks numbered questions in one message and says a reply of "defaults" accepts them all; no plan gate yet; only `investigate` may run; fixture untouched |
 
 Every turn of every scenario also checks three invariants, unless the scenario overrides them:
 
@@ -93,10 +95,11 @@ Two consequences. Workers cannot run tests or `git`, so reviewers judge by readi
 
 ## Cost
 
-Each scenario has a per-turn budget in its `limits`. With the defaults, the caps add up to about $14 for one full pass (seven scenarios, eight turns). The cap is checked against Claude Code's client-side cost estimate, so a run can overshoot it by the calls already in flight. Real spend is far lower. Scenario 01 cost $0.03 with Sonnet as the orchestrator. Rough estimates with Sonnet:
+Each scenario has a per-turn budget in its `limits`. With the defaults, the caps add up to about $18 for one full pass (nine scenarios, ten turns). The cap is checked against Claude Code's client-side cost estimate, so a run can overshoot it by the calls already in flight. Real spend is far lower. Scenario 01 cost $0.03 with Sonnet as the orchestrator. Rough estimates with Sonnet:
 
-- **gate scenarios (03 to 06):** $0.10 to $0.60 each
+- **gate and question scenarios (03 to 06, and 09):** $0.10 to $0.60 each
 - **scenario 02, which runs a worker and a reviewer:** $0.30 to $1.50
+- **scenario 08, which runs a worker but no reviewer:** less than scenario 02
 - **a full pass:** $1 to $4
 
 Opus or Fable in the orchestrator's seat costs a few times more. A baseline pass costs about the same. The table prints each scenario's client-side cost estimate, and the footer gives the total. A `--resume` turn reports the conversation's cumulative cost, so the runner subtracts the previous turn's total; `summary.json` keeps both `cost_usd` (this turn) and `cost_usd_cumulative`.

@@ -1,0 +1,43 @@
+{
+  "description": "A one-file typo fix with no logic or behavior change. It is trivial: a worker still makes it, but it gets no review and no plan gate, and the report marks it not reviewed.",
+  "skills": [
+    "orchestrate"
+  ],
+  "query": "Fix the typo \"langauge\" in docs/usage.md.",
+  "files": [
+    "fixtures/pyapp"
+  ],
+  "expected_behavior": [
+    "Asks no questions: the request is clear",
+    "Routes the fix to easy-worker with the model set explicitly; the orchestrator never edits docs/usage.md itself",
+    "Treats the change as trivial (one file, no logic or behavior change) and dispatches no review (SKILL.md section 9)",
+    "Does not stop at the plan gate",
+    "Reports once, marks the task 'not reviewed', and states the cleanup status"
+  ],
+  "assert": {
+    "dispatches": [
+      "easy-worker"
+    ],
+    "not_dispatched": [
+      "review",
+      "hard-worker"
+    ],
+    "final_text_regex": [
+      "not\\W+(been\\W+)?reviewed|unreviewed|no review|skip(s|ped)?\\W+(the\\W+)?review|review\\W+(was\\W+)?skipped|without\\W+(a\\W+)?review"
+    ],
+    "final_text_not_regex": [
+      "blocked on you\\W+approve the (\\w+ )?plan"
+    ],
+    "fixture_file_regex": {
+      "docs/usage.md": [
+        "A language code that is not in",
+        "\\A(?![\\s\\S]*langauge)"
+      ]
+    }
+  },
+  "limits": {
+    "max_turns": 25,
+    "budget_usd": 2.0,
+    "timeout_s": 900
+  }
+}

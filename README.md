@@ -2,7 +2,7 @@
 
 One orchestration workflow that works the same way in three coding agents: **Claude Code**, **Codex**, and **OpenCode**.
 
-The model in your session acts as the **orchestrator**. It splits the job into tasks, briefs worker subagents, sends their results to a reviewer, judges the evidence, and reports once. It does not write code itself. Hard tasks go to a worker on a strong model and easy tasks to a worker on a cheap one, so cost follows difficulty. The orchestrator's context stays small, because the workers hold the files, search results, and command output.
+The model in your session acts as the **orchestrator**. It splits the job into tasks, briefs worker subagents, sends every non-trivial result to a reviewer, judges the evidence, and reports once. It does not write code itself. Hard tasks go to a worker on a strong model and easy tasks to a worker on a cheap one, so cost follows difficulty. The orchestrator's context stays small, because the workers hold the files, search results, and command output.
 
 ## For AI agents
 
@@ -39,11 +39,13 @@ Workers cannot start other workers. Each runtime enforces this differently. Clau
 - **OpenCode** denies their edit tools but gives both a full shell, so `investigate` can inspect anything and `review` can run tests.
 - **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is only a prompt rule. Run Codex in the `workspace-write` sandbox, which is the default, because `review` needs it to run tests.
 
-One reviewer, `review`, checks all work, easy and hard, on the strong model. The orchestrator runs it once, after the last change. It runs it earlier only when later work builds on files that an earlier step wrote. `review` checks the change against the acceptance criteria and against the repository's written rules (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and style guides). It reports spec, standards, and code defects separately, so a clean result in one cannot hide a failure in another.
+One reviewer, `review`, checks all non-trivial work, easy and hard, on the strong model. Trivial work touches one file and changes no logic or behavior, such as a typo, a docs edit, a config value that changes no behavior, or a version bump. When the whole run's change is trivial, a worker still makes it, but it skips review, and the report says "not reviewed". When any part of the run is non-trivial, `review` covers every changed file. The orchestrator runs `review` once, after the last change. It runs it earlier only when later work builds on files that an earlier step wrote. `review` checks the change against the acceptance criteria and against the repository's written rules (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and style guides). It reports spec, standards, and code defects separately, so a clean result in one cannot hide a failure in another.
 
-`review` cites the worker's test output, and it re-runs or adds checks where that output falls short. Every runtime therefore gives it a shell, and with a shell it can still write files. Staying read-only there is a prompt rule.
+Implementing workers prove each acceptance criterion directly, by running the feature or the script, not only the test suite, and report one line of evidence per criterion. `review` reports every defect it finds in its first pass, and a re-review checks only the fix. `review` cites the worker's lint, typecheck, test, and build output when it postdates the final edit and covers the changed files, and runs only the checks that are missing. Every runtime therefore gives it a shell, and with a shell it can still write files. Staying read-only there is a prompt rule.
 
 Workers and `review` check in a real browser only for flows the brief names, new pages, major layout or flow changes, and complex flows.
+
+Before they report, workers stop the processes, containers, and browser sessions they started and delete their scratch files. Each report lists anything left behind. If any does, the orchestrator sends one `easy-worker` cleanup pass before its final report, and the report states what was cleaned up. Workers save screenshots outside the repository, and the report lists the evidence screenshots it kept. Cleanup never deletes anything that existed before the session or that git tracks.
 
 ## Install
 
@@ -86,6 +88,8 @@ Then start a **fresh** session:
 - **OpenCode:** select the `orchestrate` primary agent. OpenCode does not use the skill. The default `free` stack uses OpenCode Zen's free models (`opencode/...`), which need no provider login of their own. Other stacks need their provider connected first (see [Runtime notes](#runtime-notes)).
 
 Only you can start the skill. The model never starts it on its own. Codex needs `policy.allow_implicit_invocation: false` for this, and `build.py` writes that setting into the skill's `agents/openai.yaml`.
+
+**Questions up front.** When a request is unclear or needs your decision, the orchestrator first finds out what it can by reading and running things through `investigate`. It then asks every remaining question in one numbered message, each with a default. Reply "defaults" to accept them all. When no plan-gate condition holds, your answers let work proceed. Otherwise the plan gate below still applies. After the plan passes the gate, or once the first writing wave starts when no gate condition holds, the orchestrator does not stop to ask. It takes the safe, reversible choice and lists it in the report. A plan-gate condition that newly holds still stops the run. If you change a requirement mid-run, the orchestrator checks the change against the code, the acceptance criteria, and the plan. When the change conflicts with them, it reports the changed plan and waits for your go. Otherwise it tells you how the plan changed.
 
 **Plan gate.** The orchestrator stops for your approval before it sends out the first task that writes anything, in three cases:
 
@@ -225,8 +229,6 @@ After you change the skill or its plan gate, run `python3 evals/run.py --dry-run
 
 The workflow works without any of these. Install only the ones you use. The orchestrator and every worker see the description of every installed skill. A skill that a worker cannot run, such as one that starts agents or interviews you, only adds noise.
 
-### For workers
-
 Workers load one of these when it matches their task. The orchestrator also names `frontend-design`, `tdd`, `diagnosing-bugs`, and `defuddle` in a worker's brief when the task fits and the skill is installed. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, and the CLI links them into every agent it detects. `npx skills update` refreshes them, and `~/.agents/.skill-lock.json` records the source and commit of each one.
 
 **`tdd` and `diagnosing-bugs`** from [mattpocock/skills](https://github.com/mattpocock/skills): test-first development, and a diagnosis loop for hard bugs and performance regressions. Install these two rather than the whole pack, which is built for working with you directly.
@@ -253,15 +255,9 @@ npx skills add kepano/obsidian-skills --global --skill defuddle
 npx skills add anthropics/skills --global --skill frontend-design
 ```
 
-### For you
-
-**`unslop` and `technical-writing`** come from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack). `/unslop` removes AI-sounding patterns from text. `/technical-writing` is a standard for docs, READMEs, PR descriptions, and commit messages, and it applies `unslop` as it goes. You start both yourself, so workers never load them. Run them on writing you want to tighten.
-
-```bash
-npx skills add cursor/plugins --global --skill unslop technical-writing
-```
-
 Workers read a project's `DESIGN.md` before UI work. To give agents your visual identity in a structured form, see Google's [DESIGN.md format](https://github.com/google-labs-code/design.md).
+
+The writing rules built into the workers and the orchestrator's report are adapted from the `unslop` and `technical-writing` skills in Lauren Tan's [pStack](https://github.com/cursor/plugins/tree/main/pstack) (MIT), so workers do not need those skills installed.
 
 ## Support
 

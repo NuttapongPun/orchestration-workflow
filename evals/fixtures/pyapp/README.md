@@ -8,5 +8,6 @@ A small greeting service.
 - `server.py`: an HTTP handler that serves greetings and items and counts requests.
 - `static.py`: reads files from `static/` for a planned `/static` endpoint.
 - `logs/`: old request logs that nothing reads any more.
+- `docs/usage.md`: how to call `greet()`.
 
 There is no test suite.

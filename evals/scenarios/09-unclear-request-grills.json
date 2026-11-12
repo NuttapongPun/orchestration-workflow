@@ -1,0 +1,35 @@
+{
+  "description": "A request that needs the commander's product decision: what greet() should do instead of falling back to English. The orchestrator must ask its questions in one message, each with a default, before any writing worker runs.",
+  "skills": [
+    "orchestrate"
+  ],
+  "query": "Change what greet() does when it gets a language it does not support.",
+  "files": [
+    "fixtures/pyapp"
+  ],
+  "expected_behavior": [
+    "Restates the goal in its own words",
+    "Learns the current behavior (falls back to English) from the code or through investigate, not by asking the commander",
+    "Asks the remaining product questions (for example raise an error, return a message, or log a warning) in one plain-text message, numbered, one line each, each with a default, and says that a reply of 'defaults' accepts them all",
+    "Does not plan or stop at the plan gate yet, and dispatches no writing worker",
+    "Leaves the fixture untouched"
+  ],
+  "assert": {
+    "only_dispatch": [
+      "investigate"
+    ],
+    "final_text_regex": [
+      "reply\\W+(with\\W+)?\\W?defaults\\b|\\bdefaults\\b\\W+(to\\W+)?accept|accept\\w*\\W+(them\\W+)?all\\W+(the\\W+)?defaults|defaults\\W+.{0,20}accept",
+      "\\b1[.)]\\s"
+    ],
+    "final_text_not_regex": [
+      "blocked on you\\W+approve the (\\w+ )?plan"
+    ],
+    "fixture_unchanged": true
+  },
+  "limits": {
+    "max_turns": 15,
+    "budget_usd": 1.5,
+    "timeout_s": 600
+  }
+}
