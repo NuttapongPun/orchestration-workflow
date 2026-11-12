@@ -1,7 +1,7 @@
 ---
 description: Strong worker for complex tasks spanning architecture, multiple modules, security, concurrency, migrations, performance, difficult debugging, or complex UI.
 mode: subagent
-model: openrouter/xiaomi/mimo-v2.6-pro
+model: openrouter/openai/gpt-6.1-terra#high
 color: "#f59e0b"
 permissions:
   - { action: edit, resource: "*", effect: allow }

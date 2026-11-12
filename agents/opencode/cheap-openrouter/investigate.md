@@ -1,7 +1,7 @@
 ---
 description: Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live.
 mode: subagent
-model: openrouter/deepseek/deepseek-v4.1-flash-1017#low
+model: openrouter/meta/muse-ember#max
 color: "#38bdf8"
 permissions:
   - { action: edit, resource: "*", effect: deny }

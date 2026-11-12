@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that plans work, routes tasks by tier, and verifies non-trivial results through review before finishing
 mode: primary
-model: openrouter/deepseek/deepseek-v4-pro-0813#high
+model: openrouter/openai/gpt-6.1-terra#high
 color: "#a78bfa"
 permissions:
   - { action: edit, resource: "*", effect: deny }

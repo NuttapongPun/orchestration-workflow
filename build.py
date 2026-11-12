@@ -96,9 +96,13 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
 #   opencode/beam-free (passed the orchestration probe, but its provider retains data for 30 days),
 #   opencode/big-pickle, opencode/iceman-free (unnamed stealth models that use your data; Big Pickle
 #   also has many reports of corrupted output).
-# The DeepSeek models in cheap-openrouter offer only low/high/max effort, so the usual medium
-# rounds up to high (easy-worker) and orchestrate is raised from low to high on purpose.
-# MiMo V2.6 Pro on OpenRouter offers no effort levels, so hard-worker and review carry None.
+# cheap-openrouter runs GPT-6.1 Terra (orchestrate, hard-worker), Muse Ember (easy tier) and Claude Haiku 5.5
+# (review; see the comment above its override). Against the MiMo V2.6 Pro they replaced, hard-worker and review
+# score higher on the Artificial Analysis index and finish index tasks 2 to 9 times faster, at the same cost per
+# index task for hard-worker and more for review ($0.26 to $0.41). Terra and Muse Ember also score higher on the
+# index than the old DeepSeek models at max, but the old stack ran those at high and below, so that comparison is
+# not like for like. No OpenRouter endpoint of the three models trains on prompts. Muse Ember is new (released
+# 2026-11-09) and has only two OpenRouter endpoints.
 # Anthropic IDs use dashes in the version (claude-opus-5-5); OpenRouter IDs use dots (claude-opus-5.5).
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack.
@@ -109,14 +113,17 @@ OPENCODE_STACKS = {
     "claude":            oc_stack("anthropic/claude-fable-5-2",             "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5",
                                   effort={"orchestrate": "medium", "investigate": "high", "easy-worker": "high", "review": "medium"}),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
-    "cheap-openrouter":  oc_stack("openrouter/deepseek/deepseek-v4-pro-0813",  "openrouter/xiaomi/mimo-v2.6-pro", "openrouter/deepseek/deepseek-v4.1-flash-1017",
-                                  effort={"orchestrate": "high", "easy-worker": "high", "hard-worker": None, "review": None}),
+    "cheap-openrouter":  oc_stack("openrouter/openai/gpt-6.1-terra",          "openrouter/openai/gpt-6.1-terra",    "openrouter/meta/muse-ember",
+                                  effort={"orchestrate": "high", "investigate": "max", "easy-worker": "max", "hard-worker": "high", "review": "max"}),
 }
 # As in Codex (MODEL_OVERRIDES): hard-worker runs GPT-6.1 Terra, review stays on Sol.
 OPENCODE_STACKS["openai"]["hard-worker"]["model"] = "openai/gpt-6.1-terra"
 OPENCODE_STACKS["openai-openrouter"]["hard-worker"]["model"] = "openrouter/openai/gpt-6.1-terra"
 # As in Claude Code: review runs Fable, above hard-worker's Opus.
 OPENCODE_STACKS["claude"]["review"]["model"] = "anthropic/claude-fable-5-2"
+# On purpose: cheap-openrouter's review runs a model from a different company than hard-worker, so their blind
+# spots overlap less. Haiku 5.5 at max scores a little below Terra at high. Do not move review to an OpenAI model.
+OPENCODE_STACKS["cheap-openrouter"]["review"]["model"] = "openrouter/anthropic/claude-haiku-5.5"
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", "max", None)
 for _stack, _spec in OPENCODE_STACKS.items():

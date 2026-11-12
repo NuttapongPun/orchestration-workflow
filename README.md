@@ -39,7 +39,7 @@ Workers cannot start other workers. Each runtime enforces this differently. Clau
 - **OpenCode** denies their edit tools but gives both a full shell, so `investigate` can inspect anything and `review` can run tests.
 - **Codex** has no per-agent control. Every worker, `investigate` included, inherits the session's sandbox and approval settings, so read-only is only a prompt rule. Run Codex in the `workspace-write` sandbox, which is the default, because `review` needs it to run tests.
 
-One reviewer, `review`, checks all non-trivial work, easy and hard, on the strong model. Trivial work touches one file and changes no logic or behavior, such as a typo, a docs edit, a config value that changes no behavior, or a version bump. When the whole run's change is trivial, a worker still makes it, but it skips review, and the report says "not reviewed". When any part of the run is non-trivial, `review` covers every changed file. The orchestrator runs `review` once, after the last change. It runs it earlier only when later work builds on files that an earlier step wrote. `review` checks the change against the acceptance criteria and against the repository's written rules (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and style guides). It reports spec, standards, and code defects separately, so a clean result in one cannot hide a failure in another.
+One reviewer, `review`, checks all non-trivial work, easy and hard, on the hard tier. Trivial work touches one file and changes no logic or behavior, such as a typo, a docs edit, a config value that changes no behavior, or a version bump. When the whole run's change is trivial, a worker still makes it, but it skips review, and the report says "not reviewed". When any part of the run is non-trivial, `review` covers every changed file. The orchestrator runs `review` once, after the last change. It runs it earlier only when later work builds on files that an earlier step wrote. `review` checks the change against the acceptance criteria and against the repository's written rules (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and style guides). It reports spec, standards, and code defects separately, so a clean result in one cannot hide a failure in another.
 
 Implementing workers prove each acceptance criterion directly, by running the feature or the script, not only the test suite, and report one line of evidence per criterion. `review` reports every defect it finds in its first pass, and a re-review checks only the fix. `review` cites the worker's lint, typecheck, test, and build output when it postdates the final edit and covers the changed files, and runs only the checks that are missing. Every runtime therefore gives it a shell, and with a shell it can still write files. Staying read-only there is a prompt rule.
 
@@ -157,16 +157,18 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 
 Installing a different stack replaces the five installed OpenCode agent files. The installer asks first unless you pass `--yes`. Start a fresh session afterwards. Every stack except `free` needs its provider linked first with `opencode auth login`.
 
-The table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`. Model IDs use OpenCode's `provider/model` form, as `opencode models` prints them. A `#low`, `#medium`, `#high`, or `#max` suffix is the effort level. A model with no suffix runs at its provider's default, because OpenCode offers no effort levels for it.
+The table has one row per agent and one column per stack, the same shape as `OPENCODE_STACKS` in `build.py`. Model IDs use OpenCode's `provider/model` form, as `opencode models` prints them. A `#low`, `#medium`, `#high`, or `#max` suffix is the effort level. No current stack leaves the suffix off. A model without one runs at its provider's default, which is how a model with no OpenCode effort levels is set.
 
 | Agent | `free` (default) | `openai` | `openai-openrouter` | `claude` | `claude-openrouter` | `cheap-openrouter` |
 |---|---|---|---|---|---|---|
 | *Provider* | OpenCode Zen | OpenAI | OpenRouter | Anthropic | OpenRouter | OpenRouter |
-| `orchestrate` | `opencode/deepseek-v4.1-flash-free#high` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/deepseek/deepseek-v4-pro-0813#high` |
-| `investigate` | `opencode/minimax-m3.1-flash-free#medium` | `openai/gpt-6.1-terra#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/deepseek/deepseek-v4.1-flash-1017#low` |
-| `easy-worker` | `opencode/minimax-m3.1-flash-free#medium` | `openai/gpt-6.1-terra#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/deepseek/deepseek-v4.1-flash-1017#high` |
-| `hard-worker` | `opencode/deepseek-v4.1-flash-free#max` | `openai/gpt-6.1-terra#high` | `openrouter/openai/gpt-6.1-terra#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
-| `review` | `opencode/deepseek-v4.1-flash-free#max` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/xiaomi/mimo-v2.6-pro` |
+| `orchestrate` | `opencode/deepseek-v4.1-flash-free#high` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/openai/gpt-6.1-terra#high` |
+| `investigate` | `opencode/minimax-m3.1-flash-free#medium` | `openai/gpt-6.1-terra#low` | `openrouter/openai/gpt-6-luna#low` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#low` | `openrouter/meta/muse-ember#max` |
+| `easy-worker` | `opencode/minimax-m3.1-flash-free#medium` | `openai/gpt-6.1-terra#medium` | `openrouter/openai/gpt-6-luna#medium` | `anthropic/claude-sonnet-5-5#high` | `openrouter/anthropic/claude-sonnet-5.5#medium` | `openrouter/meta/muse-ember#max` |
+| `hard-worker` | `opencode/deepseek-v4.1-flash-free#max` | `openai/gpt-6.1-terra#high` | `openrouter/openai/gpt-6.1-terra#high` | `anthropic/claude-opus-5-5#high` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/openai/gpt-6.1-terra#high` |
+| `review` | `opencode/deepseek-v4.1-flash-free#max` | `openai/gpt-6.1-sol#high` | `openrouter/openai/gpt-6.1-sol#high` | `anthropic/claude-fable-5-2#medium` | `openrouter/anthropic/claude-opus-5.5#high` | `openrouter/anthropic/claude-haiku-5.5#max` |
+
+By design, `cheap-openrouter` reviews with Claude Haiku 5.5, from a different company than its GPT-6.1 Terra `hard-worker`, so their blind spots overlap less.
 
 Rough cost per million tokens, from OpenRouter list prices in November 2026:
 
@@ -179,11 +181,10 @@ Rough cost per million tokens, from OpenRouter list prices in November 2026:
 | Claude Fable 5.2 | $8 | $40 |
 | Claude Opus 5.5 | $4 | $20 |
 | Claude Sonnet 5.5 | $2 | $10 |
-| MiMo V2.6 Pro | $0.435 | $0.87 |
-| DeepSeek V4 Pro 0813 | $0.66 | $1.98 |
-| DeepSeek V4.1 Flash 1017 | $0.15 | $0.60 |
+| Claude Haiku 5.5 | $0.10 | $0.50 |
+| Muse Ember | $0.10 | $0.50 |
 
-The DeepSeek prices are off-peak. At peak, weekdays 01:00-04:00 and 06:00-10:00 UTC, DeepSeek charges double, and OpenRouter passes the peak price through. V4 Pro then costs $1.32 in and $3.96 out, and V4.1 Flash costs $0.30 in and $1.20 out.
+OpenRouter can send a request to any provider that serves the model, and some providers train on your prompts. To block them, turn off training providers in your [OpenRouter privacy settings](https://openrouter.ai/settings/privacy), where you can also require zero data retention. As of November 2026, no OpenRouter provider of the three `cheap-openrouter` models trains on prompts. Muse Ember has only two providers: Meta keeps prompts for 30 days, and Google Vertex, its only zero-retention one, keeps some for safety checks, so a strict zero-retention setting may leave Muse Ember with no provider.
 
 † **Free-tier terms.** OpenCode Zen's docs say the providers of both free models follow a zero-retention policy and do not use your data for training. Most other free Zen models use what they see to improve the model, so check the [Zen docs](https://opencode.ai/docs/zen/) before you swap one in. Both are free for a limited time. The docs state no rate limit for either, but Zen may throttle free use.
 
