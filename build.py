@@ -51,7 +51,7 @@ def model_for(runtime, agent):
 # bare model (for a model that has no effort variants). Model and effort are independent per
 # agent, so `investigate` can differ from the other easy-tier agents.
 # Model IDs are OpenCode's provider/model form (see `opencode models`).
-# Prices are in README.md, "OpenCode model stacks"; alternatives are noted above OPENCODE_STACKS.
+# Alternatives are noted above OPENCODE_STACKS.
 # The five OpenCode agents: the primary orchestrator plus every worker in BODIES. Spelled out
 # here because BODIES is defined further down; the OpenCode section re-checks the two agree.
 OC_AGENTS = ["orchestrate", "investigate", "easy-worker", "hard-worker", "review"]
@@ -457,7 +457,7 @@ A worker starts blind. It has none of this conversation. Every brief carries:
   - test-first work: `tdd`
   - hard bugs and performance regressions: `diagnosing-bugs`
   - reading web pages: `defuddle`
-  - image assets from a reference: `generate-image`
+  - image assets, made from a reference or generated: `generate-image`
 - what to return: conclusion, one line per acceptance criterion with its direct evidence, files changed, commands run with their output, anything left behind, unresolved risks
 
 For review tasks, provide the raw artifacts and neutral criteria, not the implementer's conclusions. The worker's verification evidence, the commands it ran and their verbatim output, is a raw artifact; its claims about what that output shows are conclusions.
