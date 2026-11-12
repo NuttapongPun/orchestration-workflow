@@ -457,6 +457,7 @@ A worker starts blind. It has none of this conversation. Every brief carries:
   - test-first work: `tdd`
   - hard bugs and performance regressions: `diagnosing-bugs`
   - reading web pages: `defuddle`
+  - image assets from a reference: `generate-image`
 - what to return: conclusion, one line per acceptance criterion with its direct evidence, files changed, commands run with their output, anything left behind, unresolved risks
 
 For review tasks, provide the raw artifacts and neutral criteria, not the implementer's conclusions. The worker's verification evidence, the commands it ran and their verbatim output, is a raw artifact; its claims about what that output shows are conclusions.

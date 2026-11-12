@@ -4,7 +4,7 @@ Behavioral tests for `/orchestrate`. Each scenario sends one request to a real o
 
 They follow Anthropic's [skill authoring guidance](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices#build-evaluations-first): a few scenarios built around the behaviors the skill exists for, a **baseline** run of the same requests without the skill, and a run for **each model** you plan to use as the orchestrator.
 
-Nothing in `evals/` is installed into any runtime. `install.sh` installs only `skills/orchestrate/` and `agents/<runtime>/`.
+Nothing in `evals/` is installed into any runtime. `install.sh` installs only `skills/orchestrate/`, `skills/generate-image/`, and `agents/<runtime>/`.
 
 ## Run it
 

@@ -13,6 +13,7 @@ If you are an agent reading this repository to help someone install or adapt the
 ```
 build.py                 single source of truth: worker prompts and model table. Generates everything below.
 skills/orchestrate/      the shared /orchestrate skill (the method) and one short binding file per runtime
+skills/generate-image/   a hand-written companion skill for image assets, installed with orchestrate
 agents/claude/           worker subagents for Claude Code      -> ~/.claude/agents/*.md
 agents/codex/            worker subagents for Codex            -> ~/.codex/agents/*.toml
 agents/opencode/<stack>/ worker subagents and the orchestrate primary agent for OpenCode, one directory per model stack -> ~/.config/opencode/agents/*.md
@@ -49,7 +50,7 @@ Before they report, workers stop the processes, containers, and browser sessions
 
 ## Install
 
-One command installs or updates everything. The installer detects which of the three runtimes are on the machine and installs the worker agents and the skill into each one. It also changes two settings in `~/.codex/config.toml`:
+One command installs or updates everything. The installer detects which of the three runtimes are on the machine and installs the worker agents, the `orchestrate` skill, and the `generate-image` skill into each one. It also changes two settings in `~/.codex/config.toml`:
 
 - It adds `[agents] max_depth = 1`, which stops workers from starting workers, when the file has no `[agents]` section. If the section exists without `max_depth`, the installer prints a note asking you to add the line yourself.
 - It sets `web_search = "live"` when the file has no `web_search` setting. See [Codex web search](#codex-web-search).
@@ -64,12 +65,12 @@ If an installed worker agent or skill file already exists and differs, the insta
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --yes
 ```
 
-That is the whole install. Do not run `npx skills add` on this repo yourself. The installer already runs it in copy mode when `npx` is available, and the skill cannot work without the worker agents that the installer adds.
+That is the whole install. Do not run `npx skills add` on this repo to get the `orchestrate` workflow. The installer already runs it in copy mode when `npx` is available, and `orchestrate` cannot work without the worker agents that the installer adds. Installing only the `generate-image` skill that way is fine. See [Companion skills](#companion-skills).
 
 **Copy mode and link mode.** The installer picks its mode from how you start it:
 
-- **Copy mode** is what `curl | bash` always uses. The installer copies files into each runtime. It installs the skill through the [`skills` CLI](https://skills.sh) (`npx skills add`) when `npx` is available, and copies it directly otherwise. Link mode never uses the `skills` CLI.
-- **Link mode** is used only when `install.sh` runs as a file inside a clone (`./install.sh`). The runtime files, the skill included, become symlinks into the clone, so edits and `git pull` take effect without reinstalling. The `skills` CLI does not manage this link, and the installer prints a note saying so. If the CLI installed `orchestrate` earlier, `npx skills update` replaces the link with a copy of GitHub `main`. Run `./install.sh` from the clone again to restore the link.
+- **Copy mode** is what `curl | bash` always uses. The installer copies files into each runtime. It installs the skills through the [`skills` CLI](https://skills.sh) (`npx skills add`) when `npx` is available, and copies them directly otherwise. Link mode never uses the `skills` CLI.
+- **Link mode** is used only when `install.sh` runs as a file inside a clone (`./install.sh`). The runtime files, the skills included, become symlinks into the clone, so edits and `git pull` take effect without reinstalling. The `skills` CLI does not manage these links, and the installer prints a note saying so. If the CLI installed either skill earlier, `npx skills update` replaces the link with a copy of GitHub `main`. Run `./install.sh` from the clone again to restore the link.
 
 Both modes copy the Codex worker files, because Codex rejects symlinked agent files.
 
@@ -105,7 +106,7 @@ Otherwise it proceeds without asking. Read-only investigation runs before the ga
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
 ```
 
-**Uninstall.** This removes the skill and the worker agents from every runtime:
+**Uninstall.** This removes the skills and the worker agents from every runtime:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash -s -- --uninstall
@@ -231,7 +232,7 @@ After you change the skill or its plan gate, run `python3 evals/run.py --dry-run
 
 The workflow works without any of these. Install only the ones you use. The orchestrator and every worker see the description of every installed skill. A skill that a worker cannot run, such as one that starts agents or interviews you, only adds noise.
 
-Workers load one of these when it matches their task. The orchestrator also names `frontend-design`, `tdd`, `diagnosing-bugs`, and `defuddle` in a worker's brief when the task fits and the skill is installed. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, and the CLI links them into every agent it detects. `npx skills update` refreshes them, and `~/.agents/.skill-lock.json` records the source and commit of each one.
+Workers load one of these when it matches their task. The orchestrator also names `frontend-design`, `tdd`, `diagnosing-bugs`, `defuddle`, and `generate-image` in a worker's brief when the task fits and the skill is installed. They install through the [`skills` CLI](https://skills.sh) into `~/.agents/skills/`, and the CLI links them into every agent it detects. `npx skills update` refreshes them, and `~/.agents/.skill-lock.json` records the source and commit of each one.
 
 **`tdd` and `diagnosing-bugs`** from [mattpocock/skills](https://github.com/mattpocock/skills): test-first development, and a diagnosis loop for hard bugs and performance regressions. Install these two rather than the whole pack, which is built for working with you directly.
 
@@ -255,6 +256,12 @@ npx skills add kepano/obsidian-skills --global --skill defuddle
 
 ```bash
 npx skills add anthropics/skills --global --skill frontend-design
+```
+
+**`generate-image`** makes an image asset from a reference image. It crops, resizes, or removes the background locally when that reaches the quality bar, and otherwise has an image-capable CLI agent create the asset and checks that the result is large enough not to blur. It lives in this repo, and the installer installs it together with `orchestrate`, so you need no extra step. When it has to generate, it drives an installed image-capable CLI agent (`codex` first, then `agy`), which spends that agent's usage. The `agy` route runs `agy` with `--dangerously-skip-permissions`, so `agy` can run any command without asking. In a test run it read files outside its working directory and installed a Python package unasked. The skill prefers `codex` when it is installed. It asks before installing any tool. To install only this skill:
+
+```bash
+npx skills add NuttapongPun/orchestration-workflow --global --skill generate-image
 ```
 
 Workers read a project's `DESIGN.md` before UI work. To give agents your visual identity in a structured form, see Google's [DESIGN.md format](https://github.com/google-labs-code/design.md).

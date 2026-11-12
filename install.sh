@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Install or update the orchestration workflow (shared /orchestrate skill + worker subagents)
-# into every supported runtime found on this machine: Claude Code, Codex, OpenCode.
+# Install or update the orchestration workflow (shared /orchestrate and generate-image skills +
+# worker subagents) into every supported runtime found on this machine: Claude Code, Codex, OpenCode.
 #
 # One-line install / update (copy mode):
 #   curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow/main/install.sh | bash
@@ -30,7 +30,8 @@ main() {
 
 REPO_SLUG="NuttapongPun/orchestration-workflow"
 TARBALL="https://github.com/$REPO_SLUG/archive/refs/heads/main.tar.gz"
-CANON="$HOME/.agents/skills/orchestrate"        # canonical skill location (what the `skills` CLI uses)
+CANON_DIR="$HOME/.agents/skills"                # canonical skill location (what the `skills` CLI uses)
+SKILLS=(orchestrate generate-image)             # in-repo skills, installed together under $CANON_DIR/<name>
 
 YES=0; MODE=""; UNINSTALL=0; OC_STACK="free"
 for a in "$@"; do case "$a" in
@@ -79,9 +80,14 @@ if [[ $UNINSTALL -eq 1 ]]; then
     for w in investigate easy-worker hard-worker review orchestrate "${RETIRED[@]}"; do
       for ext in md toml; do f="$agents_dir/$w.$ext"; [[ -e "$f" || -L "$f" ]] && rm -f "$f" && say "removed $f"; done
     done
-    [[ -n "$skills_dir" && -L "$skills_dir/orchestrate" ]] && rm -f "$skills_dir/orchestrate" && say "removed $skills_dir/orchestrate"
+    for s in "${SKILLS[@]}"; do
+      [[ -n "$skills_dir" && -L "$skills_dir/$s" ]] && rm -f "$skills_dir/$s" && say "removed $skills_dir/$s"
+    done
   done
-  [[ -e "$CANON" || -L "$CANON" ]] && rm -rf "$CANON" && say "removed $CANON"
+  for s in "${SKILLS[@]}"; do
+    canon="$CANON_DIR/$s"
+    [[ -e "$canon" || -L "$canon" ]] && rm -rf "$canon" && say "removed $canon"
+  done
   say "Done. (Left in place in ~/.codex/config.toml: any [agents] max_depth and web_search lines.)"
   exit 0
 fi
@@ -125,6 +131,12 @@ else
   SRC="$(find "$TMP" -maxdepth 1 -mindepth 1 -type d | head -1)"
 fi
 say "Mode: $MODE   Source: $SRC"
+# A source from before a skill was added has no directory for it; install the rest.
+SKILLS_AVAIL=()
+for s in "${SKILLS[@]}"; do
+  if [[ -f "$SRC/skills/$s/SKILL.md" ]]; then SKILLS_AVAIL+=("$s"); else say "WARNING: $SRC has no skills/$s; skipping that skill."; fi
+done
+[[ ${#SKILLS_AVAIL[@]} -gt 0 ]] || { say "ERROR: $SRC has no skills to install." >&2; exit 1; }
 
 # ------------------------------------------------------------------ OpenCode stack
 # The stack name is used as a path component, so it must be a plain directory name: not empty
@@ -165,26 +177,31 @@ for rt in "${FOUND[@]}"; do
     for ext in md toml; do f="$agents_dir/$w.$ext"; [[ -e "$f" || -L "$f" ]] && EXISTING+=("$f"); done
   done
 done
-# The canonical skill directory and the per-runtime pointers to it are replaced in place, so
+# The canonical skill directories and the per-runtime pointers to them are replaced in place, so
 # anything already there that is not what we would place joins the same one confirmation.
-skill_differs() { # 0 = installed and differs from what we would place; 1 = absent or identical
-  [[ -e "$CANON" || -L "$CANON" ]] || return 1
+skill_differs() { # skill_differs <name>: 0 = installed and differs from what we would place; 1 = absent or identical
+  local canon="$CANON_DIR/$1"
+  [[ -e "$canon" || -L "$canon" ]] || return 1
   if [[ "$MODE" == "link" ]]; then
-    same_target "$CANON" "$SRC/skills/orchestrate" && return 1
+    same_target "$canon" "$SRC/skills/$1" && return 1
   else
-    [[ ! -L "$CANON" ]] && diff -qr "$SRC/skills/orchestrate" "$CANON" >/dev/null 2>&1 && return 1
+    [[ ! -L "$canon" ]] && diff -qr "$SRC/skills/$1" "$canon" >/dev/null 2>&1 && return 1
   fi
   return 0
 }
-CANON_DIFFERS=0; SKILL_DIFFERS=0
-if skill_differs; then CANON_DIFFERS=1; SKILL_DIFFERS=1; EXISTING+=("$CANON"); fi
+CANON_DIFFERS=""; SKILL_DIFFERS=0   # CANON_DIFFERS: " name " for each skill whose canonical copy differs
+for s in "${SKILLS_AVAIL[@]}"; do
+  if skill_differs "$s"; then CANON_DIFFERS+=" $s "; SKILL_DIFFERS=1; EXISTING+=("$CANON_DIR/$s"); fi
+done
 for rt in "${FOUND[@]}"; do
   IFS='|' read -r name detect agents_dir src skills_dir <<<"$rt"
   [[ -n "$skills_dir" ]] || continue          # OpenCode reads ~/.agents/skills itself; no pointer
-  link="$skills_dir/orchestrate"
-  [[ -e "$link" || -L "$link" ]] || continue  # absent: placed silently below
-  if same_target "$link" "$CANON" || points_to "$link" "$CANON"; then continue; fi
-  SKILL_DIFFERS=1; EXISTING+=("$link")
+  for s in "${SKILLS_AVAIL[@]}"; do
+    link="$skills_dir/$s"
+    [[ -e "$link" || -L "$link" ]] || continue  # absent: placed silently below
+    if same_target "$link" "$CANON_DIR/$s" || points_to "$link" "$CANON_DIR/$s"; then continue; fi
+    SKILL_DIFFERS=1; EXISTING+=("$link")
+  done
 done
 
 REPLACE=1
@@ -224,31 +241,42 @@ place() { # place <src> <dest> [copyonly]   (link or copy depending on MODE; res
 
 # ------------------------------------------------------------------ skill
 say "Skill:"
-SKILL_VIA_CLI=0
-if [[ $CANON_DIFFERS -eq 1 && $REPLACE -eq 0 ]]; then
-  say "  kept existing $CANON (not replaced)."
-else
-  if [[ "$MODE" == "copy" && $SKILL_KEEP -eq 1 ]] && command -v npx >/dev/null 2>&1; then
-    say "  skipping the skills CLI: it would relink the skill dirs you chose to keep. Copying $CANON directly. Re-run with --yes to let the skills CLI manage it."
-  elif [[ "$MODE" == "copy" ]] && command -v npx >/dev/null 2>&1; then
-    say "  skills CLI available (npx). Installing the skill through it so 'npx skills update' can refresh it."
-    yflag=""; [[ $YES -eq 1 ]] && yflag="-y"
-    if [[ $HAVE_TTY -eq 1 ]]; then npx -y skills add "$REPO_SLUG" --global --skill orchestrate $yflag < /dev/tty && SKILL_VIA_CLI=1 || true
-    else npx -y skills add "$REPO_SLUG" --global --skill orchestrate -y < /dev/null && SKILL_VIA_CLI=1 || true; fi
-    [[ $SKILL_VIA_CLI -eq 1 && -d "$CANON" ]] || { SKILL_VIA_CLI=0; say "  skills CLI install did not produce $CANON; falling back to a direct copy."; }
+HAVE_NPX=0; command -v npx >/dev/null 2>&1 && HAVE_NPX=1
+# One skills CLI call installs every skill. The CLI skips a name GitHub main does not have and
+# installs the rest; each skill it did not produce falls back to a direct copy below.
+CLI_RAN=0; CLI_OK=0
+if [[ "$MODE" == "copy" && $SKILL_KEEP -eq 0 && $HAVE_NPX -eq 1 ]]; then
+  say "  skills CLI available (npx). Installing the skills through it so 'npx skills update' can refresh them."
+  CLI_RAN=1
+  yflag=""; [[ $YES -eq 1 ]] && yflag="-y"
+  if [[ $HAVE_TTY -eq 1 ]]; then npx -y skills add "$REPO_SLUG" --global --skill "${SKILLS_AVAIL[@]}" $yflag < /dev/tty && CLI_OK=1 || true
+  else npx -y skills add "$REPO_SLUG" --global --skill "${SKILLS_AVAIL[@]}" -y < /dev/null && CLI_OK=1 || true; fi
+fi
+for s in "${SKILLS_AVAIL[@]}"; do
+  canon="$CANON_DIR/$s"
+  if [[ "$CANON_DIFFERS" == *" $s "* && $REPLACE -eq 0 ]]; then
+    say "  kept existing $canon (not replaced)."
+    continue
+  fi
+  SKILL_VIA_CLI=0
+  if [[ "$MODE" == "copy" && $SKILL_KEEP -eq 1 && $HAVE_NPX -eq 1 ]]; then
+    say "  skipping the skills CLI: it would relink the skill dirs you chose to keep. Copying $canon directly. Re-run with --yes to let the skills CLI manage it."
+  elif [[ $CLI_RAN -eq 1 ]]; then
+    if [[ $CLI_OK -eq 1 && -d "$canon" ]]; then SKILL_VIA_CLI=1
+    else say "  skills CLI install did not produce $canon; falling back to a direct copy."; fi
   fi
   if [[ $SKILL_VIA_CLI -eq 0 ]]; then
     if [[ "$MODE" == "link" ]]; then
-      same_target "$CANON" "$SRC/skills/orchestrate" || { rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; ln -s "$SRC/skills/orchestrate" "$CANON"; say "  linked $CANON"; }
-      # The skills CLI's lock (~/.agents/.skill-lock.json) may still list orchestrate from an earlier
+      same_target "$canon" "$SRC/skills/$s" || { rm -rf "$canon"; mkdir -p "$(dirname "$canon")"; ln -s "$SRC/skills/$s" "$canon"; say "  linked $canon"; }
+      # The skills CLI's lock (~/.agents/.skill-lock.json) may still list the skill from an earlier
       # copy install; the lock is left alone, so say what `npx skills update` would do to this link.
-      say "  note: linked to the clone, not managed by the skills CLI. If 'npx skills' installed orchestrate before,"
+      say "  note: linked to the clone, not managed by the skills CLI. If 'npx skills' installed $s before,"
       say "        'npx skills update' will replace this link with a copy of GitHub main. Re-run with --copy for the CLI-managed copy."
     else
-      rm -rf "$CANON"; mkdir -p "$(dirname "$CANON")"; cp -R "$SRC/skills/orchestrate" "$CANON"; say "  copied to $CANON"
+      rm -rf "$canon"; mkdir -p "$(dirname "$canon")"; cp -R "$SRC/skills/$s" "$canon"; say "  copied to $canon"
     fi
   fi
-fi
+done
 
 # ------------------------------------------------------------------ per-runtime
 for rt in "${FOUND[@]}"; do
@@ -263,10 +291,12 @@ for rt in "${FOUND[@]}"; do
     done
   done
   if [[ -n "$skills_dir" ]]; then
-    link="$skills_dir/orchestrate"
-    if same_target "$link" "$CANON" || points_to "$link" "$CANON"; then :
-    elif [[ ( -e "$link" || -L "$link" ) && $REPLACE -eq 0 ]]; then say "  kept existing $link (not replaced)."
-    else rm -rf "$link"; mkdir -p "$skills_dir"; ln -s "$CANON" "$link"; say "  linked $link -> $CANON"; fi
+    for s in "${SKILLS_AVAIL[@]}"; do
+      link="$skills_dir/$s"; canon="$CANON_DIR/$s"
+      if same_target "$link" "$canon" || points_to "$link" "$canon"; then :
+      elif [[ ( -e "$link" || -L "$link" ) && $REPLACE -eq 0 ]]; then say "  kept existing $link (not replaced)."
+      else rm -rf "$link"; mkdir -p "$skills_dir"; ln -s "$canon" "$link"; say "  linked $link -> $canon"; fi
+    done
   fi
   if [[ "$src" == "codex" ]]; then
     cfg="$HOME/.codex/config.toml"
