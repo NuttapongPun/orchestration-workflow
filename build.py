@@ -30,11 +30,14 @@ EFFORT_OPENAI = {"investigate": "low", "easy-worker": "medium", "hard-worker": "
 
 MODELS = {
     "claude":      {"easy": "sonnet",      "hard": "opus"},
-    "codex":       {"easy": "gpt-6.1-terra", "hard": "gpt-6.1-sol"},
+    "codex":       {"easy": "gpt-6.1-terra", "hard": "gpt-6.2-sol"},
 }
 # Per-agent exceptions to the tier model, so the final check runs on the strongest model.
 # Claude Code: review runs Fable, above hard-worker's Opus. Codex: hard-worker runs GPT-6.1 Terra
 # (half Sol's price, faster), like the easy workers but at high effort; review stays on Sol.
+# GPT-6.2 Sol (2026-11-17) costs the same as 6.1 Sol ($2 in, $10 out per 1M tokens). On Artificial
+# Analysis at high it scores engineering 58.7 and Terminal-Bench 4.0 58.6% against 6.1 Sol's 55.4 and
+# 51.5%, at $0.56 against $0.59 and 4.7 against 7.2 minutes per index task. There is no GPT-6.2 Terra.
 MODEL_OVERRIDES = {"claude": {"review": "fable"}, "codex": {"hard-worker": "gpt-6.1-terra"}}
 
 def model_for(runtime, agent):
@@ -82,20 +85,18 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
         per_agent = {a: effort for a in OC_AGENTS}
     return {a: {"model": model[a], "effort": per_agent[a]} for a in OC_AGENTS}
 
-# The `free` stack uses only Zen models whose provider keeps zero retention and does not train on
-# your data: DeepSeek V4.1 Flash at max effort for hard-worker and review (Artificial Analysis
-# engineering 37.6 and Terminal-Bench 4.0 33.8%, ahead of MiniMax M3.1 Flash and GLM-5.3-Flash) and
-# at high for orchestrate, and MiniMax M3.1 Flash at medium for the easy tier. Zen offers DeepSeek
-# V4.1 Flash only low/high/max.
-# The other zero-retention free models: opencode/glm-5.3-flash-free (close in score but slow, about
-# 47 tokens/s) and opencode/longcat-2.5-free (hosted in China, 100 requests per day).
-# Other free Zen models, with known problems:
-#   opencode/mimo-v2.6-flash-free, opencode/nemotron-3.5-lightning-free, opencode/nemotron-3.5-super-vl-free,
-#   opencode/flint-40b-free (provider uses your data to improve the model),
-#   opencode/inkling-2-small-free (provider retains your data and may train on it),
-#   opencode/beam-free (passed the orchestration probe, but its provider retains data for 30 days),
-#   opencode/big-pickle, opencode/iceman-free (unnamed stealth models that use your data; Big Pickle
-#   also has many reports of corrupted output).
+# The `free` stack runs DeepSeek V4.1 Flash for every agent: max effort for hard-worker and review
+# (Artificial Analysis engineering 37.6, FrontierCode-AA 2.0 28.5%, Terminal-Bench 4.0 33.8%, 15.2 min
+# per index task) and high for orchestrate and the easy tier (34.4, 16.8%, 28.8%, 11.9 min). Zen offers
+# it only at low, high and max. Its provider keeps zero retention and does not train on your data.
+# Zen withdrew the old easy-tier model, opencode/minimax-m3.1-flash-free, on 2026-11-17, and
+# opencode/glm-5.3-flash-free on 2026-11-18. OpenCode 2.3.2 no longer lists either, and a live run of
+# the MiniMax model fails with "Model unavailable".
+# The other zero-retention, no-training free models (checked 2026-11-19):
+#   opencode/hy4-flash-free (new on 2026-11-16, effort none or high, not yet scored by Artificial Analysis),
+#   opencode/longcat-2.5-free (hosted in China, 100 requests per day).
+# opencode/tidepool-alpha-free is new and missing from Zen's docs, so its data policy is unknown. Every
+# other free Zen model retains your data, trains on it, or logs it.
 # cheap-openrouter runs GPT-6.1 Terra (orchestrate, hard-worker), Muse Ember (easy tier) and Claude Haiku 5.5
 # (review; see the comment above its override). Against the MiMo V2.6 Pro they replaced, hard-worker and review
 # score higher on the Artificial Analysis index and finish index tasks 2 to 9 times faster, at the same cost per
@@ -106,10 +107,14 @@ def oc_stack(pm, hard, easy, effort=OC_EFFORTS):
 # Anthropic IDs use dashes in the version (claude-opus-5-5); OpenRouter IDs use dots (claude-opus-5.5).
 OPENCODE_STACKS = {
     # Free OpenCode Zen models; the installer's default stack.
-    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/deepseek-v4.1-flash-free", "opencode/minimax-m3.1-flash-free",
-                                  effort={"orchestrate": "high", "investigate": "medium", "easy-worker": "medium", "hard-worker": "max", "review": "max"}),
-    "openai":            oc_stack("openai/gpt-6.1-sol",                     "openai/gpt-6.1-sol",               "openai/gpt-6.1-terra", effort={"orchestrate": "high"}),
-    "openai-openrouter": oc_stack("openrouter/openai/gpt-6.1-sol",            "openrouter/openai/gpt-6.1-sol",      "openrouter/openai/gpt-6-luna", effort={"orchestrate": "high"}),
+    "free":              oc_stack("opencode/deepseek-v4.1-flash-free",        "opencode/deepseek-v4.1-flash-free", "opencode/deepseek-v4.1-flash-free",
+                                  effort={"orchestrate": "high", "investigate": "high", "easy-worker": "high", "hard-worker": "max", "review": "max"}),
+    # The OpenAI orchestrators run GPT-6.2 Sol at medium, the effort OpenAI's guide says to start with: on
+    # Artificial Analysis it scores 56.2 against 58.7 at high, at $0.41 and 3.3 min per index task against
+    # $0.56 and 4.7. On OpenRouter no GPT-6.2 Sol endpoint trains on prompts; Azure keeps zero retention,
+    # and OpenAI and Bedrock retain prompts.
+    "openai":            oc_stack("openai/gpt-6.2-sol",                     "openai/gpt-6.2-sol",               "openai/gpt-6.1-terra", effort={"orchestrate": "medium"}),
+    "openai-openrouter": oc_stack("openrouter/openai/gpt-6.2-sol",            "openrouter/openai/gpt-6.2-sol",      "openrouter/openai/gpt-6.1-terra", effort={"orchestrate": "medium"}),
     "claude":            oc_stack("anthropic/claude-fable-5-2",             "anthropic/claude-opus-5-5",        "anthropic/claude-sonnet-5-5",
                                   effort={"orchestrate": "medium", "investigate": "high", "easy-worker": "high", "review": "medium"}),
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
@@ -667,7 +672,7 @@ write("skills/orchestrate/references/claude-code.md", """# Claude Code binding
 write("skills/orchestrate/references/codex.md", """# Codex binding
 
 - **Dispatch:** spawn subagents by worker name: `investigate`, `easy-worker`, `hard-worker`, `review`. Worker definitions live in `~/.codex/agents/*.toml` and carry their own model and reasoning effort.
-- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. `investigate`, `easy-worker`, and `hard-worker` run `gpt-6.1-terra`, at low, medium, and high reasoning effort respectively. `review` runs `gpt-6.1-sol` at high reasoning effort. If any of these models is not callable in the live runtime, report blocked on model availability. Never substitute another model.
+- **Model rule:** pass the model explicitly on every spawn even though the worker file sets it. `investigate`, `easy-worker`, and `hard-worker` run `gpt-6.1-terra`, at low, medium, and high reasoning effort respectively. `review` runs `gpt-6.2-sol` at high reasoning effort. If any of these models is not callable in the live runtime, report blocked on model availability. Never substitute another model.
 - **No nesting:** `[agents] max_depth = 1` in `~/.codex/config.toml` prevents workers from spawning workers.
 - **Concurrency:** spawn every ready task in the wave before waiting on any of them. Respect `agents.max_concurrent_threads_per_session`. The wave's results come back together.
 - **Sandbox:** workers inherit the session's sandbox and approval settings; a worker file cannot change them. Read-only workers are read-only by their instructions only, so tell `investigate` and `review` in the brief not to modify files. The commander should run the session in `workspace-write` (the default): reviewers re-run or add checks when the worker's output falls short, which a `read-only` session blocks when they write caches or build output.

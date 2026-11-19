@@ -49,7 +49,7 @@ Start a **fresh** session after installing. Only you can start the workflow. A m
 | Runtime | Suggested orchestrator | How to set it |
 |---|---|---|
 | Claude Code | Claude Fable 5.2, medium effort | `/model` |
-| Codex | GPT-6.1 Sol, high reasoning effort | `/model` |
+| Codex | GPT-6.2 Sol, medium reasoning effort | `/model` |
 | OpenCode | Set by the stack you installed | See [Pick an OpenCode stack](#pick-an-opencode-stack) |
 
 **Questions first.** When a request is unclear, the orchestrator first finds what it can through `investigate`. Then it asks every remaining question in one numbered message, each with a default. Reply "defaults" to accept them all. Once writing starts, it stops again for the plan gate or a step only you can take. Otherwise it takes the safe, reversible choice and lists it in the report.
@@ -74,18 +74,18 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 
 | Stack | Orchestrator | `investigate`, `easy-worker` | `hard-worker` | `review` | Login |
 |---|---|---|---|---|---|
-| `free` (default) | DeepSeek V4.1 Flash | MiniMax M3.1 Flash | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash | none (OpenCode Zen) |
-| `openai` | GPT-6.1 Sol | GPT-6.1 Terra | GPT-6.1 Terra | GPT-6.1 Sol | OpenAI |
+| `free` (default) | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash | none (OpenCode Zen) |
+| `openai` | GPT-6.2 Sol | GPT-6.1 Terra | GPT-6.1 Terra | GPT-6.2 Sol | OpenAI |
 | `claude` | Claude Fable 5.2 | Claude Sonnet 5.5 | Claude Opus 5.5 | Claude Fable 5.2 | Anthropic |
-| `openai-openrouter` | GPT-6.1 Sol | GPT-6 Luna | GPT-6.1 Terra | GPT-6.1 Sol | OpenRouter |
+| `openai-openrouter` | GPT-6.2 Sol | GPT-6.1 Terra | GPT-6.1 Terra | GPT-6.2 Sol | OpenRouter |
 | `claude-openrouter` | Claude Opus 5.5 | Claude Sonnet 5.5 | Claude Opus 5.5 | Claude Opus 5.5 | OpenRouter |
 | `cheap-openrouter` | GPT-6.1 Terra | Muse Ember | GPT-6.1 Terra | Claude Haiku 5.5 | OpenRouter |
 
-Every stack except `free` needs its provider linked first with `opencode auth login`. Installing a different stack replaces the installed OpenCode agent files, so start a fresh session afterwards. The `free` stack costs nothing, but its models are weaker, so read the review verdicts yourself. The free offer is for a limited time.
+Every stack except `free` needs its provider linked first with `opencode auth login`. Installing a different stack replaces the installed OpenCode agent files, so start a fresh session afterwards. The `free` stack costs nothing, but its model is weaker, so read the review verdicts yourself. The free offer is for a limited time.
 
 **How the models are chosen.** Each stack balances result quality, cost per task, and time per task. In most stacks the strongest model orchestrates and reviews, and cheaper, faster models do the simple work.
 
-**Your data.** `free` uses only models whose providers keep no data and do not train on it. On OpenRouter stacks, you can block providers that train on your prompts in your [OpenRouter privacy settings](https://openrouter.ai/settings/privacy). Muse Ember, in `cheap-openrouter`, has two providers: Meta keeps prompts for 30 days, and Google Vertex keeps some for safety checks. A strict zero-retention setting there may leave Muse Ember with no provider.
+**Your data.** `free` uses a model whose provider keeps no data and does not train on it. On OpenRouter stacks, you can block providers that train on your prompts in your [OpenRouter privacy settings](https://openrouter.ai/settings/privacy). Muse Ember, in `cheap-openrouter`, has two providers: Meta keeps prompts for 30 days, and Google Vertex keeps some for safety checks. A strict zero-retention setting there may leave Muse Ember with no provider.
 
 ## Requirements and known risks
 

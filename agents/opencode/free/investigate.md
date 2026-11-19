@@ -1,7 +1,7 @@
 ---
 description: Read-only research worker. Gathers facts from code and documentation and reports what exists, how it works, and where things live.
 mode: subagent
-model: opencode/minimax-m3.1-flash-free#medium
+model: opencode/deepseek-v4.1-flash-free#high
 color: "#38bdf8"
 permissions:
   - { action: edit, resource: "*", effect: deny }
