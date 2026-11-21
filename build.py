@@ -120,7 +120,7 @@ OPENCODE_STACKS = {
     "claude-openrouter": oc_stack("openrouter/anthropic/claude-opus-5.5",   "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-sonnet-5.5", effort={"orchestrate": "high"}),
     "cheap-openrouter":  oc_stack("openrouter/openai/gpt-6.1-terra",          "openrouter/openai/gpt-6.1-terra",    "openrouter/meta/muse-ember",
                                   effort={"orchestrate": "high", "investigate": "max", "easy-worker": "max", "hard-worker": "high", "review": "max"}),
-    "openrouter-google": oc_stack("openrouter/google/gemini-4-neon",        "openrouter/google/gemini-4-neon",    "openrouter/google/gemini-4-neon",
+    "google-openrouter": oc_stack("openrouter/google/gemini-4-neon",        "openrouter/google/gemini-4-neon",    "openrouter/google/gemini-4-neon",
                                   effort={"orchestrate": "medium", "investigate": "low", "easy-worker": "medium", "hard-worker": "high", "review": "medium"}),
 }
 # As in Codex (MODEL_OVERRIDES): hard-worker runs GPT-6.1 Terra, review stays on Sol.
@@ -131,7 +131,7 @@ OPENCODE_STACKS["claude"]["review"]["model"] = "anthropic/claude-fable-5-2"
 # On purpose: cheap-openrouter's review runs a model from a different company than hard-worker, so their blind
 # spots overlap less. Haiku 5.5 at max scores a little below Terra at high. Do not move review to an OpenAI model.
 OPENCODE_STACKS["cheap-openrouter"]["review"]["model"] = "openrouter/anthropic/claude-haiku-5.5"
-# openrouter-google picks come from Artificial Analysis data fetched 2026-11-21, balancing cost, time and score per
+# google-openrouter picks come from Artificial Analysis data fetched 2026-11-21, balancing cost, time and score per
 # task. Gemini 4 Neon at medium scores 54.9 at $1.90 and 8.3 min, at low 44.1 at $0.75 and 3.7 min, at high 59.6 at
 # $3.74 and 14.8 min. Carbon at medium scores 58.3 in 26 min and has the lowest hallucination rate of the Google
 # variants measured. Neon at medium beats Gemini 4 Hydrogen at high (50.8 at $1.87 and 9.2 min), and Neon at low
@@ -139,7 +139,7 @@ OPENCODE_STACKS["cheap-openrouter"]["review"]["model"] = "openrouter/anthropic/c
 # cost. OpenCode issues #55694 and #64967 (OpenRouter) and #64628 (OpenCode Go) report failed tool calls on Argon.
 # On purpose, review runs Carbon, a different model from hard-worker. No Google model has a `max` variant. Neon also
 # has `xhigh`, which OC_EFFORT_LEVELS does not accept, so `high` is the top level this file can write.
-OPENCODE_STACKS["openrouter-google"]["review"]["model"] = "openrouter/google/gemini-4-carbon"
+OPENCODE_STACKS["google-openrouter"]["review"]["model"] = "openrouter/google/gemini-4-carbon"
 
 OC_EFFORT_LEVELS = ("low", "medium", "high", "max", None)
 for _stack, _spec in OPENCODE_STACKS.items():

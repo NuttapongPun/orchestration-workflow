@@ -22,7 +22,7 @@
 #         --opencode-stack=<name>  which OpenCode model stack to install (default: free).
 #                                  <name> is a plain directory name under agents/opencode/
 #                                  (no slash, no leading dot). The names there today are:
-#                                  free, openai, openai-openrouter, claude, claude-openrouter, cheap-openrouter, openrouter-google
+#                                  free, openai, openai-openrouter, claude, claude-openrouter, cheap-openrouter, google-openrouter
 #         --uninstall  remove everything this script installed
 set -euo pipefail
 

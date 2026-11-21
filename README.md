@@ -79,8 +79,8 @@ curl -fsSL https://raw.githubusercontent.com/NuttapongPun/orchestration-workflow
 | `claude` | Claude Fable 5.2 | Claude Sonnet 5.5 | Claude Opus 5.5 | Claude Fable 5.2 | Anthropic |
 | `openai-openrouter` | GPT-6.2 Sol | GPT-6.1 Terra | GPT-6.1 Terra | GPT-6.2 Sol | OpenRouter |
 | `claude-openrouter` | Claude Opus 5.5 | Claude Sonnet 5.5 | Claude Opus 5.5 | Claude Opus 5.5 | OpenRouter |
+| `google-openrouter` | Gemini 4 Neon | Gemini 4 Neon | Gemini 4 Neon | Gemini 4 Carbon | OpenRouter |
 | `cheap-openrouter` | GPT-6.1 Terra | Muse Ember | GPT-6.1 Terra | Claude Haiku 5.5 | OpenRouter |
-| `openrouter-google` | Gemini 4 Neon | Gemini 4 Neon | Gemini 4 Neon | Gemini 4 Carbon | OpenRouter |
 
 Every stack except `free` needs its provider linked first with `opencode auth login`. Installing a different stack replaces the installed OpenCode agent files, so start a fresh session afterwards. The `free` stack costs nothing, but its model is weaker, so read the review verdicts yourself. The free offer is for a limited time.
 
